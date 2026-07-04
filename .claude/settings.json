@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/aitorsantana/Documents/dev/projects/supermarket-planner/.claude/commands/**)",
+      "Read(//Users/aitorsantana/Documents/dev/projects/supermarket-planner/.claude/skills/anti-patterns/**)",
+      "Read(//Users/aitorsantana/Documents/dev/projects/supermarket-planner/.claude/skills/class-first-architecture/**)",
+      "Read(//Users/aitorsantana/Documents/dev/projects/supermarket-planner/.claude/skills/clean-code/**)",
+      "Read(//Users/aitorsantana/Documents/dev/projects/supermarket-planner/.claude/skills/code-semantic/**)",
+      "Read(//Users/aitorsantana/Documents/dev/projects/supermarket-planner/.claude/skills/hexagonal-architecture/**)",
+      "Read(//Users/aitorsantana/Documents/dev/projects/supermarket-planner/.claude/skills/rop/**)",
+      "Read(//Users/aitorsantana/Documents/dev/projects/supermarket-planner/.claude/skills/testing/**)",
+      "Bash(rtk ls *)",
+      "Edit(/.claude/skills/hexagonal-architecture/**)",
+      "Edit(/.claude/skills/class-first-architecture/**)",
+      "Bash(mkdir -p \"/Users/aitorsantana/Documents/dev/projects/finance_manager/.claude/workspace/progress\")",
+      "Bash(mv \"/Users/aitorsantana/Documents/dev/projects/finance_manager/.claude/workspace/planning/PLAN-jsx-to-tsx-next-init.md\" \"/Users/aitorsantana/Documents/dev/projects/finance_manager/.claude/workspace/progress/PLAN-jsx-to-tsx-next-init.md\")",
+      "Read(//Users/aitorsantana/Documents/dev/projects/fm-scaffold/**)",
+      "Bash(rtk read *)",
+      "mcp__chrome-devtools__new_page",
+      "mcp__chrome-devtools__take_snapshot",
+      "mcp__chrome-devtools__list_console_messages",
+      "mcp__chrome-devtools__click"
+    ]
+  }
+}
