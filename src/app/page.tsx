@@ -26,32 +26,32 @@ import { GoalsTab } from "@/features/goals/components/GoalsTab";
    esto es el panel de control visual para tomar decisiones rápido.
    ============================================================================ */
 
-type TabId = "patrimonio" | "presupuesto" | "metas";
+type TabId = "wealth" | "budget" | "goals";
 
 /* ============================================================================
    APP RAÍZ — navegación por pestañas
    ============================================================================ */
-export default function FinanzasApp(): React.JSX.Element {
-  const [tab, setTab] = useState<TabId>("patrimonio");
-  const [cartera, setCartera] = useState<Position[]>(PORTFOLIO_INITIAL);
-  const [historico] = useState<PortfolioHistoryPoint[]>(PRICE_HISTORY_INITIAL);
-  const [deudas, setDeudas] = useState<Debt[]>(DEBTS_INITIAL);
-  const [presupuestoBase, setPresupuestoBase] = useState<Budget>(BUDGET_BASE_INITIAL);
-  const [meses, setMeses] = useState<Month[]>(MONTHS_INITIAL);
-  const [gastosFijosItems, setGastosFijosItems] = useState<FixedExpenseItem[]>(FIXED_EXPENSES_INITIAL);
-  const [salarioActual, setSalarioActual] = useState<number>(27000);
-  const [aportacionFI, setAportacionFI] = useState<number>(293);
-  const [rentabilidadFI, setRentabilidadFI] = useState<number>(0.07);
-  const [huchaBTC, setHuchaBTC] = useState<number>(0);
-  const [condicionesBTC, setCondicionesBTC] = useState<BtcConditions>({ disposable: true, dcaActive: true });
-  const [contarCoche, setContarCoche] = useState<boolean>(true);
+export default function FinanceApp(): React.JSX.Element {
+  const [tab, setTab] = useState<TabId>("wealth");
+  const [portfolio, setPortfolio] = useState<Position[]>(PORTFOLIO_INITIAL);
+  const [priceHistory] = useState<PortfolioHistoryPoint[]>(PRICE_HISTORY_INITIAL);
+  const [debts, setDebts] = useState<Debt[]>(DEBTS_INITIAL);
+  const [baseBudget, setBaseBudget] = useState<Budget>(BUDGET_BASE_INITIAL);
+  const [months, setMonths] = useState<Month[]>(MONTHS_INITIAL);
+  const [fixedExpenseItems, setFixedExpenseItems] = useState<FixedExpenseItem[]>(FIXED_EXPENSES_INITIAL);
+  const [currentSalary, setCurrentSalary] = useState<number>(27000);
+  const [fiContribution, setFiContribution] = useState<number>(293);
+  const [fiReturn, setFiReturn] = useState<number>(0.07);
+  const [btcSavings, setBtcSavings] = useState<number>(0);
+  const [btcConditions, setBtcConditions] = useState<BtcConditions>({ disposable: true, dcaActive: true });
+  const [countCar, setCountCar] = useState<boolean>(true);
 
-  const derivada = useMemo(() => portfolioCalculator.derive(cartera), [cartera]);
+  const portfolioDerived = useMemo(() => portfolioCalculator.derive(portfolio), [portfolio]);
 
   const TABS: Array<{ id: TabId; label: string }> = [
-    { id: "patrimonio",  label: "Patrimonio" },
-    { id: "presupuesto", label: "Presupuesto" },
-    { id: "metas",       label: "Metas" },
+    { id: "wealth",  label: "Patrimonio" },
+    { id: "budget", label: "Presupuesto" },
+    { id: "goals",       label: "Metas" },
   ];
 
   return (
@@ -62,31 +62,31 @@ export default function FinanzasApp(): React.JSX.Element {
         <div>
           <div className="eyebrow" style={{ marginBottom:8 }}>Finanzas · {new Date().toLocaleDateString("es-ES",{day:"numeric",month:"long",year:"numeric"})}</div>
           <h1 className="disp" style={{ margin:0, fontSize:"clamp(24px,4.5vw,36px)", fontWeight:600, letterSpacing:"-.02em" }}>
-            {tab === "patrimonio" ? "Patrimonio total" : tab === "presupuesto" ? "Presupuesto" : "Metas y plan"}
+            {tab === "wealth" ? "Patrimonio total" : tab === "budget" ? "Presupuesto" : "Metas y plan"}
           </h1>
         </div>
         <nav className="tabnav">
-          {TABS.map(t => (
-            <button key={t.id} className={`tabbtn ${tab===t.id?"on":""}`} onClick={() => setTab(t.id)}>{t.label}</button>
+          {TABS.map(tabItem => (
+            <button key={tabItem.id} className={`tabbtn ${tab===tabItem.id?"on":""}`} onClick={() => setTab(tabItem.id)}>{tabItem.label}</button>
           ))}
         </nav>
       </header>
 
-      {tab === "patrimonio" && (
-        <WealthTab portfolio={cartera} setPortfolio={setCartera} priceHistory={historico} portfolioDerived={derivada} debts={deudas} />
+      {tab === "wealth" && (
+        <WealthTab portfolio={portfolio} setPortfolio={setPortfolio} priceHistory={priceHistory} portfolioDerived={portfolioDerived} debts={debts} />
       )}
-      {tab === "presupuesto" && (
-        <BudgetTab baseBudget={presupuestoBase} setBaseBudget={setPresupuestoBase} months={meses} setMonths={setMeses} fixedExpenseItems={gastosFijosItems} setFixedExpenseItems={setGastosFijosItems} />
+      {tab === "budget" && (
+        <BudgetTab baseBudget={baseBudget} setBaseBudget={setBaseBudget} months={months} setMonths={setMonths} fixedExpenseItems={fixedExpenseItems} setFixedExpenseItems={setFixedExpenseItems} />
       )}
-      {tab === "metas" && (
+      {tab === "goals" && (
         <GoalsTab
-          portfolioDerived={derivada} debts={deudas} setDebts={setDeudas}
-          currentSalary={salarioActual} setCurrentSalary={setSalarioActual}
-          fiContribution={aportacionFI} setFiContribution={setAportacionFI}
-          fiReturn={rentabilidadFI} setFiReturn={setRentabilidadFI}
-          btcSavings={huchaBTC} setBtcSavings={setHuchaBTC}
-          btcConditions={condicionesBTC} setBtcConditions={setCondicionesBTC}
-          countCar={contarCoche} setCountCar={setContarCoche}
+          portfolioDerived={portfolioDerived} debts={debts} setDebts={setDebts}
+          currentSalary={currentSalary} setCurrentSalary={setCurrentSalary}
+          fiContribution={fiContribution} setFiContribution={setFiContribution}
+          fiReturn={fiReturn} setFiReturn={setFiReturn}
+          btcSavings={btcSavings} setBtcSavings={setBtcSavings}
+          btcConditions={btcConditions} setBtcConditions={setBtcConditions}
+          countCar={countCar} setCountCar={setCountCar}
         />
       )}
 
