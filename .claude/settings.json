@@ -19,7 +19,16 @@
       "mcp__chrome-devtools__new_page",
       "mcp__chrome-devtools__take_snapshot",
       "mcp__chrome-devtools__list_console_messages",
-      "mcp__chrome-devtools__click"
+      "mcp__chrome-devtools__click",
+      "Bash(rtk wc *)",
+      "Bash(awk '/PESTAÑA 2/{print NR\": \"$0}' src/app/page.tsx)",
+      "Bash(awk '/PESTAÑA 3/{print NR\": \"$0}' src/app/page.tsx)",
+      "Bash(awk '/PESTAÑA 2/{print NR}' src/app/page.tsx)",
+      "Bash(awk '/PESTAÑA 3/{print NR}' src/app/page.tsx)",
+      "Bash(rtk lint *)",
+      "Bash(pnpm add *)",
+      "Bash(rtk vitest *)",
+      "Bash(rtk proxy *)"
     ]
   }
 }
