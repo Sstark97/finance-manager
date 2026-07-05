@@ -28,7 +28,10 @@
       "Bash(rtk lint *)",
       "Bash(pnpm add *)",
       "Bash(rtk vitest *)",
-      "Bash(rtk proxy *)"
+      "Bash(rtk proxy *)",
+      "Bash(mv progress/PLAN-vertical-slice-english-rename.md review/PLAN-vertical-slice-english-rename.md)",
+      "Bash(mkdir -p /Users/aitorsantana/Documents/dev/projects/finance_manager/.claude/workspace/review)",
+      "Bash(mv /Users/aitorsantana/Documents/dev/projects/finance_manager/.claude/workspace/progress/PLAN-vertical-slice-english-rename.md /Users/aitorsantana/Documents/dev/projects/finance_manager/.claude/workspace/review/PLAN-vertical-slice-english-rename.md)"
     ]
   }
 }
