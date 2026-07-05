@@ -2,7 +2,6 @@
 
 import React, { useState, useMemo } from "react";
 import { palette } from "@/lib/theme";
-import type { CondicionesBTC } from "@/domain/types";
 import type { Debt } from "@/shared/domain/types";
 import { DEBTS_INITIAL } from "@/shared/data/debts";
 import type { Position, PortfolioHistoryPoint } from "@/features/wealth/domain/types";
@@ -10,10 +9,11 @@ import { PORTFOLIO_INITIAL, PRICE_HISTORY_INITIAL } from "@/features/wealth/data
 import { portfolioCalculator } from "@/features/wealth/domain/PortfolioCalculator";
 import type { Month, Budget, FixedExpenseItem } from "@/features/budget/domain/types";
 import { BUDGET_BASE_INITIAL, FIXED_EXPENSES_INITIAL, MONTHS_INITIAL } from "@/features/budget/data/budget";
+import type { BtcConditions } from "@/features/goals/domain/types";
 import { AppStyles } from "@/app/AppStyles";
 import { WealthTab } from "@/features/wealth/components/WealthTab";
 import { BudgetTab } from "@/features/budget/components/BudgetTab";
-import { MetasTab } from "@/features/metas/MetasTab";
+import { GoalsTab } from "@/features/goals/components/GoalsTab";
 
 /* ============================================================================
    FINANZAS — Aitor Santana
@@ -43,7 +43,7 @@ export default function FinanzasApp(): React.JSX.Element {
   const [aportacionFI, setAportacionFI] = useState<number>(293);
   const [rentabilidadFI, setRentabilidadFI] = useState<number>(0.07);
   const [huchaBTC, setHuchaBTC] = useState<number>(0);
-  const [condicionesBTC, setCondicionesBTC] = useState<CondicionesBTC>({ prescindible: true, dcaActivo: true });
+  const [condicionesBTC, setCondicionesBTC] = useState<BtcConditions>({ disposable: true, dcaActive: true });
   const [contarCoche, setContarCoche] = useState<boolean>(true);
 
   const derivada = useMemo(() => portfolioCalculator.derive(cartera), [cartera]);
@@ -79,14 +79,14 @@ export default function FinanzasApp(): React.JSX.Element {
         <BudgetTab baseBudget={presupuestoBase} setBaseBudget={setPresupuestoBase} months={meses} setMonths={setMeses} fixedExpenseItems={gastosFijosItems} setFixedExpenseItems={setGastosFijosItems} />
       )}
       {tab === "metas" && (
-        <MetasTab
-          derivada={derivada} deudas={deudas} setDeudas={setDeudas}
-          salarioActual={salarioActual} setSalarioActual={setSalarioActual}
-          aportacionFI={aportacionFI} setAportacionFI={setAportacionFI}
-          rentabilidadFI={rentabilidadFI} setRentabilidadFI={setRentabilidadFI}
-          huchaBTC={huchaBTC} setHuchaBTC={setHuchaBTC}
-          condicionesBTC={condicionesBTC} setCondicionesBTC={setCondicionesBTC}
-          contarCoche={contarCoche} setContarCoche={setContarCoche}
+        <GoalsTab
+          portfolioDerived={derivada} debts={deudas} setDebts={setDeudas}
+          currentSalary={salarioActual} setCurrentSalary={setSalarioActual}
+          fiContribution={aportacionFI} setFiContribution={setAportacionFI}
+          fiReturn={rentabilidadFI} setFiReturn={setRentabilidadFI}
+          btcSavings={huchaBTC} setBtcSavings={setHuchaBTC}
+          btcConditions={condicionesBTC} setBtcConditions={setCondicionesBTC}
+          countCar={contarCoche} setCountCar={setContarCoche}
         />
       )}
 
