@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  LineChart, Line, XAxis, YAxis, ReferenceLine, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, BarChart, Bar
 } from "recharts";
 import { palette, seriesColorAt } from "@/lib/theme";
@@ -10,7 +10,9 @@ import { formatEuro, formatEuroWithCents, formatPercent, generateId } from "@/li
 import type { Position, PortfolioHistoryPoint, PositionType, CompositionItem } from "@/features/wealth/domain/types";
 import { TARGETS, COMPOSITIONS } from "@/features/wealth/domain/config";
 import type { PortfolioDerived } from "@/features/wealth/domain/PortfolioCalculator";
-import { fetchYahooPrice } from "@/features/wealth/infrastructure/YahooPriceGateway";
+import type { HistoryRange } from "@/features/wealth/domain/HistoryRange";
+import type { PositionPricingResult } from "@/features/wealth/application/RefreshPositionPrices";
+import type { PortfolioHistoryResult } from "@/features/wealth/application/ComputePortfolioHistory";
 import type { Debt } from "@/shared/domain/types";
 import { Metric } from "@/shared/ui/Metric";
 
@@ -24,25 +26,35 @@ type CompositionView = "countries" | "sectors";
 export interface WealthTabProps {
   portfolio: Position[];
   setPortfolio: React.Dispatch<React.SetStateAction<Position[]>>;
-  priceHistory: PortfolioHistoryPoint[];
   portfolioDerived: PortfolioDerived;
   debts: Debt[];
 }
 
 type EditablePositionField = "name" | "type" | "ticker" | "units" | "price";
 
-export function WealthTab({ portfolio, setPortfolio, priceHistory, portfolioDerived, debts }: WealthTabProps): React.JSX.Element {
+const PRICE_POLL_INTERVAL_MS = 15 * 60 * 1000;
+const HISTORY_RANGE_OPTIONS: Array<[HistoryRange, string]> = [
+  ["1d", "Día"], ["1w", "Semana"], ["1m", "Mes"], ["ytd", "YTD"], ["1y", "Año"],
+];
+
+export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts }: WealthTabProps): React.JSX.Element {
   const [stagflation, setStagflation] = useState<boolean>(true);
   const [editing, setEditing] = useState<boolean>(false);
   const [drilldown, setDrilldown] = useState<string>("world");
   const [view, setView] = useState<CompositionView>("countries");
   const [loadingPrices, setLoadingPrices] = useState<boolean>(false);
+  const [priceRefreshWarning, setPriceRefreshWarning] = useState<string | null>(null);
+  const [history, setHistory] = useState<PortfolioHistoryPoint[]>([]);
+  const [historyRange, setHistoryRange] = useState<HistoryRange>("1m");
+  const [loadingHistory, setLoadingHistory] = useState<boolean>(false);
+  const [historyWarning, setHistoryWarning] = useState<string | null>(null);
 
   const { total, invested, liquidityTotal, equity, btcTotal, btcWeightTotal, equityWeightOf, withValue } = portfolioDerived;
 
-  const lastHistoryTotal = priceHistory[priceHistory.length - 1]?.total ?? total;
-  const change = total - lastHistoryTotal;
-  const changePercent = lastHistoryTotal ? (change / lastHistoryTotal) * 100 : 0;
+  const firstHistoryTotal = history[0]?.total ?? total;
+  const firstInvestedTotal = firstHistoryTotal - liquidityTotal;
+  const change = total - firstHistoryTotal;
+  const changePercent = firstInvestedTotal ? (change / firstInvestedTotal) * 100 : 0;
 
   const totalDebt = debts.reduce((sum,debt)=>sum+(debt.balance||0),0);
   const netWorth = total - totalDebt;
@@ -106,21 +118,59 @@ export function WealthTab({ portfolio, setPortfolio, priceHistory, portfolioDeri
     group: type === "cripto" ? "btc" : type === "efectivo" ? "liquidez" : "rv",
   }]);
 
-  const refreshPrices = async (): Promise<void> => {
+  const portfolioRef = useRef(portfolio);
+  useEffect(() => { portfolioRef.current = portfolio; }, [portfolio]);
+
+  const refreshPrices = useCallback(async (): Promise<void> => {
     setLoadingPrices(true);
+    setPriceRefreshWarning(null);
     try {
-      const updates = await Promise.all(portfolio.map(async (position): Promise<{ id: string; price: number } | null> => {
-        if (position.type === "efectivo" || !position.ticker) return null;
-        try { return { id: position.id, price: await fetchYahooPrice(position.ticker) }; } catch { return null; }
-      }));
-      const priceUpdates = updates.filter((update): update is { id: string; price: number } => update !== null);
-      const map: Record<string, number> = Object.fromEntries(priceUpdates.map(priceUpdate => [priceUpdate.id, priceUpdate.price]));
-      if (Object.keys(map).length === 0) throw new Error("sin datos");
-      setPortfolio(positions => positions.map(position => map[position.id] != null ? { ...position, price: map[position.id] } : position));
+      const response = await fetch("/api/prices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ positions: portfolioRef.current }),
+      });
+      if (!response.ok) throw new Error("El backend de precios no respondió correctamente");
+      const result = (await response.json()) as PositionPricingResult;
+      setPortfolio(result.positions);
+      setPriceRefreshWarning(result.failedTickers.length > 0
+        ? `No se pudieron actualizar: ${result.failedTickers.join(", ")}. Edita el precio a mano.`
+        : null);
     } catch {
-      alert("Yahoo no disponible desde el navegador (CORS). Conéctalo en tu backend vía fetchYahooPrice(ticker). Mientras, edita el precio a mano.");
+      setPriceRefreshWarning("No se pudo conectar con el backend de precios. Mientras, edita el precio a mano.");
     } finally { setLoadingPrices(false); }
-  };
+  }, [setPortfolio]);
+
+  useEffect(() => {
+    const initialFetchId = setTimeout(refreshPrices, 0);
+    const intervalId = setInterval(refreshPrices, PRICE_POLL_INTERVAL_MS);
+    return () => { clearTimeout(initialFetchId); clearInterval(intervalId); };
+  }, [refreshPrices]);
+
+  const loadHistory = useCallback(async (range: HistoryRange): Promise<void> => {
+    setLoadingHistory(true);
+    setHistoryWarning(null);
+    try {
+      const response = await fetch("/api/prices/history", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ positions: portfolioRef.current, range }),
+      });
+      if (!response.ok) throw new Error("El backend de histórico no respondió correctamente");
+      const result = (await response.json()) as PortfolioHistoryResult;
+      setHistory(result.points);
+      setHistoryWarning(result.failedTickers.length > 0
+        ? `No se pudo reconstruir el histórico de: ${result.failedTickers.join(", ")}.`
+        : null);
+    } catch {
+      setHistoryWarning("No se pudo conectar con el backend de histórico. Se mantiene la última serie cargada.");
+    } finally { setLoadingHistory(false); }
+  }, []);
+
+  useEffect(() => {
+    const historyFetchId = setTimeout(() => { loadHistory(historyRange); }, 0);
+    return () => clearTimeout(historyFetchId);
+  }, [historyRange, loadHistory]);
 
   const scoreColor = score.total >= 8 ? palette.acc : score.total >= 6 ? palette.warn : palette.bad;
   const POSITION_TYPE_LABEL: Record<PositionType, string> = { fondo:"Fondo", etf:"ETF", cripto:"Cripto", efectivo:"Efectivo" };
@@ -129,17 +179,20 @@ export function WealthTab({ portfolio, setPortfolio, priceHistory, portfolioDeri
 
   return (
     <>
-      <div style={{ display:"flex", gap:10, flexWrap:"wrap", marginBottom:16, justifyContent:"flex-start" }}>
-        <button className="seg" onClick={refreshPrices} disabled={loadingPrices}>{loadingPrices ? "Actualizando…" : "↻ Actualizar precios (Yahoo)"}</button>
+      <div style={{ display:"flex", gap:10, flexWrap:"wrap", marginBottom:8, justifyContent:"flex-start" }}>
+        <button className="seg" onClick={refreshPrices} disabled={loadingPrices}>{loadingPrices ? "Actualizando…" : "↻ Actualizar precios"}</button>
         <button className="seg on" onClick={() => setEditing(previous => !previous)}>{editing ? "Cerrar edición" : "Editar cartera"}</button>
       </div>
+      {priceRefreshWarning && (
+        <div style={{ marginBottom:16, fontSize:12.5, color:palette.warn }}>{priceRefreshWarning}</div>
+      )}
 
       <div className="card" style={{ marginBottom:16, display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:20 }}>
         <div>
           <div className="num disp" style={{ fontSize:"clamp(40px,9vw,68px)", fontWeight:600, lineHeight:1 }}>{formatEuroWithCents(total)}</div>
           <div style={{ marginTop:10, fontSize:15 }} className="num">
             <span style={{ color: change>=0 ? palette.acc : palette.bad }}>{change>=0?"▲":"▼"} {formatEuroWithCents(Math.abs(change))} ({changePercent>=0?"+":""}{changePercent.toFixed(2)}%)</span>
-            <span style={{ color:palette.faint }}> desde el último mes registrado</span>
+            <span style={{ color:palette.faint }}> en el rango seleccionado</span>
           </div>
           <div style={{ marginTop:6, fontSize:12.5 }} className="num">
             <span style={{ color:palette.sub }}>Patrimonio neto (activos − deudas): </span>
@@ -292,16 +345,36 @@ export function WealthTab({ portfolio, setPortfolio, priceHistory, portfolioDeri
         </div>
 
         <div className="card span-full">
-          <div className="eyebrow" style={{ marginBottom:16 }}>Evolución del patrimonio</div>
-          <ResponsiveContainer width="100%" height={260}>
-            <LineChart data={priceHistory} margin={{ left:-10, right:10, top:6 }}>
-              <CartesianGrid stroke={palette.line} strokeDasharray="2 4" vertical={false} />
-              <XAxis dataKey="label" stroke={palette.faint} tick={{ fontSize:12, fontFamily:"DM Mono" }} />
-              <YAxis stroke={palette.faint} tick={{ fontSize:12, fontFamily:"DM Mono" }} tickFormatter={(value)=>`${(Number(value)/1000).toFixed(0)}k`} />
-              <Tooltip formatter={(value)=>formatEuroWithCents(Number(value))} cursor={{ stroke: palette.faint, strokeWidth: 1 }} itemStyle={{color:palette.ink}} contentStyle={{background:palette.panel2,border:`1px solid ${palette.line}`,borderRadius:8}} labelStyle={{color:palette.sub}} />
-              <Line type="monotone" dataKey="total" stroke={palette.acc} strokeWidth={2.5} dot={{ r:3, fill:palette.acc }} activeDot={{ r:5 }} />
-            </LineChart>
-          </ResponsiveContainer>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:10, marginBottom:16 }}>
+            <div className="eyebrow">Evolución del patrimonio</div>
+            <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+              {HISTORY_RANGE_OPTIONS.map(([key,label]) => (
+                <button key={key} className={`seg ${historyRange===key?"on":""}`} onClick={() => setHistoryRange(key)}>{label}</button>
+              ))}
+            </div>
+          </div>
+          {historyWarning && (
+            <div style={{ marginBottom:12, fontSize:12.5, color:palette.warn }}>{historyWarning}</div>
+          )}
+          {loadingHistory && history.length === 0 ? (
+            <div style={{ height:260, display:"flex", alignItems:"center", justifyContent:"center", color:palette.faint, fontSize:13 }}>
+              Cargando histórico…
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={260}>
+              <LineChart key={historyRange} data={history} margin={{ left:0, right:0, top:6, bottom:0 }}>
+                <XAxis dataKey="label" hide />
+                <YAxis domain={["dataMin","dataMax"]} hide />
+                <ReferenceLine y={firstHistoryTotal} stroke={palette.faint} strokeDasharray="3 4" />
+                <Tooltip formatter={(value)=>formatEuroWithCents(Number(value))} cursor={{ stroke: palette.faint, strokeWidth: 1 }} itemStyle={{color:palette.ink}} contentStyle={{background:palette.panel2,border:`1px solid ${palette.line}`,borderRadius:8}} labelStyle={{color:palette.sub}} />
+                <Line type="monotone" dataKey="total" stroke={change>=0?palette.acc:palette.bad} strokeWidth={2} dot={false} activeDot={{ r:4 }} isAnimationActive animationDuration={500} animationEasing="ease-out" />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+          <div className="num" style={{ marginTop:10, fontSize:13.5, textAlign:"center" }}>
+            <span style={{ color: change>=0 ? palette.acc : palette.bad }}>{change>=0?"▲":"▼"} {formatEuroWithCents(Math.abs(change))} ({changePercent>=0?"+":""}{changePercent.toFixed(2)}%)</span>
+            <span style={{ color:palette.faint }}> en el rango seleccionado</span>
+          </div>
         </div>
 
         <div className="card">

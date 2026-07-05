@@ -4,8 +4,8 @@ import React, { useState, useMemo } from "react";
 import { palette } from "@/lib/theme";
 import type { Debt } from "@/shared/domain/types";
 import { DEBTS_INITIAL } from "@/shared/data/debts";
-import type { Position, PortfolioHistoryPoint } from "@/features/wealth/domain/types";
-import { PORTFOLIO_INITIAL, PRICE_HISTORY_INITIAL } from "@/features/wealth/data/portfolio";
+import type { Position } from "@/features/wealth/domain/types";
+import { PORTFOLIO_INITIAL } from "@/features/wealth/data/portfolio";
 import { portfolioCalculator } from "@/features/wealth/domain/PortfolioCalculator";
 import type { Month, Budget, FixedExpenseItem } from "@/features/budget/domain/types";
 import { BUDGET_BASE_INITIAL, FIXED_EXPENSES_INITIAL, MONTHS_INITIAL } from "@/features/budget/data/budget";
@@ -34,7 +34,6 @@ type TabId = "wealth" | "budget" | "goals";
 export default function FinanceApp(): React.JSX.Element {
   const [tab, setTab] = useState<TabId>("wealth");
   const [portfolio, setPortfolio] = useState<Position[]>(PORTFOLIO_INITIAL);
-  const [priceHistory] = useState<PortfolioHistoryPoint[]>(PRICE_HISTORY_INITIAL);
   const [debts, setDebts] = useState<Debt[]>(DEBTS_INITIAL);
   const [baseBudget, setBaseBudget] = useState<Budget>(BUDGET_BASE_INITIAL);
   const [months, setMonths] = useState<Month[]>(MONTHS_INITIAL);
@@ -73,7 +72,7 @@ export default function FinanceApp(): React.JSX.Element {
       </header>
 
       {tab === "wealth" && (
-        <WealthTab portfolio={portfolio} setPortfolio={setPortfolio} priceHistory={priceHistory} portfolioDerived={portfolioDerived} debts={debts} />
+        <WealthTab portfolio={portfolio} setPortfolio={setPortfolio} portfolioDerived={portfolioDerived} debts={debts} />
       )}
       {tab === "budget" && (
         <BudgetTab baseBudget={baseBudget} setBaseBudget={setBaseBudget} months={months} setMonths={setMonths} fixedExpenseItems={fixedExpenseItems} setFixedExpenseItems={setFixedExpenseItems} />
@@ -91,7 +90,7 @@ export default function FinanceApp(): React.JSX.Element {
       )}
 
       <footer style={{ marginTop:24, paddingTop:16, borderTop:`1px solid ${palette.line}`, fontSize:11.5, color:palette.faint, lineHeight:1.6 }}>
-        Cartera editable · el precio lo trae Yahoo por ticker desde tu backend (fetchYahooPrice). Composición de índices orientativa.
+        Cartera editable · el precio lo trae Yahoo por ticker vía el backend (POST /api/prices). Composición de índices orientativa.
         No es aseso
         ramiento financiero regulado. Tu Excel de Drive sigue siendo la fuente de verdad.
       </footer>
