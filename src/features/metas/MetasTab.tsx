@@ -5,13 +5,14 @@ import { palette } from "@/lib/theme";
 import { formatEuro, formatEuroWithCents, formatPercent } from "@/lib/format";
 import type { Fase, CondicionesBTC } from "@/domain/types";
 import type { Debt } from "@/shared/domain/types";
-import { OBJETIVOS, OBJETIVO_FI, OBJETIVO_VIVIENDA, OBJETIVO_BTC_OP, FASES } from "@/domain/config";
-import type { CarteraDerivada } from "@/domain/CarteraCalculator";
+import { OBJETIVO_FI, OBJETIVO_VIVIENDA, OBJETIVO_BTC_OP, FASES } from "@/domain/config";
+import { TARGETS } from "@/features/wealth/domain/config";
+import type { PortfolioDerived } from "@/features/wealth/domain/PortfolioCalculator";
 import { proyeccionFinancieraCalculator } from "@/domain/ProyeccionFinancieraCalculator";
 import { Metric } from "@/shared/ui/Metric";
 
 export interface MetasTabProps {
-  derivada: CarteraDerivada;
+  derivada: PortfolioDerived;
   deudas: Debt[];
   setDeudas: React.Dispatch<React.SetStateAction<Debt[]>>;
   salarioActual: number;
@@ -39,7 +40,7 @@ export function MetasTab({
   condicionesBTC, setCondicionesBTC,
   contarCoche, setContarCoche,
 }: MetasTabProps): React.JSX.Element {
-  const { total, invertido, liquidezTotal } = derivada;
+  const { total, invested: invertido, liquidityTotal: liquidezTotal } = derivada;
 
   const deudaCoche = deudas.find(d => d.id === "coche");
   const deudaTotal = deudas.reduce((s,d)=>s+(d.balance||0),0);
@@ -68,7 +69,7 @@ export function MetasTab({
   }, [salarioActual, total]);
   const faseSiguiente = FASES.find(f => f.id === faseActual.id + 1);
 
-  const condFondo = liquidezTotal >= OBJETIVOS.fondoMinimo;
+  const condFondo = liquidezTotal >= TARGETS.minimumFund;
 
   return (
     <div className="grid" style={{ gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,340px),1fr))" }}>
@@ -132,13 +133,13 @@ export function MetasTab({
         <div className="eyebrow" style={{ marginBottom:8 }}>Fondo de emergencia</div>
         <div style={{ display:"flex", alignItems:"baseline", gap:8, marginBottom:6 }}>
           <span className="num disp" style={{ fontSize:26, fontWeight:600 }}>{formatEuro(liquidezTotal)}</span>
-          <span className="num" style={{ color:palette.faint }}>/ {formatEuro(OBJETIVOS.fondoEmergencia)}</span>
+          <span className="num" style={{ color:palette.faint }}>/ {formatEuro(TARGETS.emergencyFund)}</span>
         </div>
         <div className="barra" style={{ marginBottom:10 }}>
-          <div className="barra-fill" style={{ width:`${Math.min(100, liquidezTotal/OBJETIVOS.fondoEmergencia*100)}%`, background: condFondo ? palette.acc : palette.bad }} />
+          <div className="barra-fill" style={{ width:`${Math.min(100, liquidezTotal/TARGETS.emergencyFund*100)}%`, background: condFondo ? palette.acc : palette.bad }} />
         </div>
         <div style={{ fontSize:12, color:palette.sub }}>
-          {condFondo ? "Mínimo intocable cubierto." : `Por debajo del mínimo de ${formatEuro(OBJETIVOS.fondoMinimo)}: es la prioridad.`} Objetivo 6 meses de gastos (4.900€).
+          {condFondo ? "Mínimo intocable cubierto." : `Por debajo del mínimo de ${formatEuro(TARGETS.minimumFund)}: es la prioridad.`} Objetivo 6 meses de gastos (4.900€).
         </div>
       </div>
 

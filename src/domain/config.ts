@@ -1,23 +1,4 @@
-import type { Categoria, CategoriaEvento, CategoriaId, Composicion, Fase } from "@/domain/types";
-
-export const OBJETIVOS = {
-  fondoEmergencia: 4900, fondoMinimo: 1000,
-  pesoRV: { world: 60, em: 20, nasdaq: 20 },
-  btcPausar: 40, btcVender: 50, btcUmbralPausar: 10000, btcUmbralVender: 20000,
-};
-
-// Composición de índices (orientativa, jun 2026). Clave = id de la posición.
-export const COMPOSICION: Record<string, Composicion> = {
-  world: { nombre: "Fidelity MSCI World",
-    paises: [{n:"EE.UU.",v:71},{n:"Japón",v:6},{n:"Reino Unido",v:4},{n:"Canadá",v:3},{n:"Francia",v:3},{n:"Suiza",v:3},{n:"Alemania",v:2},{n:"Otros",v:8}],
-    sectores: [{n:"Tecnología",v:26},{n:"Financiero",v:16},{n:"Salud",v:11},{n:"Consumo discr.",v:11},{n:"Industria",v:11},{n:"Comunicación",v:8},{n:"Consumo básico",v:6},{n:"Otros",v:11}] },
-  em: { nombre: "Fidelity Emerging Markets",
-    paises: [{n:"China",v:27},{n:"India",v:20},{n:"Taiwán",v:19},{n:"Corea",v:11},{n:"Brasil",v:5},{n:"Arabia Saudí",v:4},{n:"Otros",v:14}],
-    sectores: [{n:"Tecnología",v:24},{n:"Financiero",v:22},{n:"Consumo discr.",v:13},{n:"Comunicación",v:10},{n:"Materiales",v:7},{n:"Industria",v:6},{n:"Otros",v:18}] },
-  nasdaq: { nombre: "iShares Nasdaq 100",
-    paises: [{n:"EE.UU.",v:97},{n:"Otros",v:3}],
-    sectores: [{n:"Tecnología",v:50},{n:"Comunicación",v:16},{n:"Consumo discr.",v:13},{n:"Salud",v:6},{n:"Consumo básico",v:6},{n:"Industria",v:5},{n:"Otros",v:4}] },
-};
+import type { Categoria, CategoriaEvento, CategoriaId, Fase } from "@/domain/types";
 
 // --------- METAS ---------------------------------------------------------
 export const OBJETIVO_FI = { capital: 750000, edadActual: 28, edadObjetivo: 50, rentaMensual: 2250 };

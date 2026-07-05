@@ -2,16 +2,17 @@
 
 import React, { useState, useMemo } from "react";
 import { palette } from "@/lib/theme";
-import type { Posicion, PuntoHistorico, Mes, PresupuestoBase, GastoFijoItem, CondicionesBTC } from "@/domain/types";
+import type { Mes, PresupuestoBase, GastoFijoItem, CondicionesBTC } from "@/domain/types";
 import type { Debt } from "@/shared/domain/types";
 import { DEBTS_INITIAL } from "@/shared/data/debts";
+import type { Position, PortfolioHistoryPoint } from "@/features/wealth/domain/types";
+import { PORTFOLIO_INITIAL, PRICE_HISTORY_INITIAL } from "@/features/wealth/data/portfolio";
 import {
-  CARTERA_INICIAL, HISTORICO_INICIAL,
   PRESUPUESTO_BASE_INICIAL, GASTOS_FIJOS_INICIAL, MESES_INICIAL,
 } from "@/data/initial-state";
-import { carteraCalculator } from "@/domain/CarteraCalculator";
+import { portfolioCalculator } from "@/features/wealth/domain/PortfolioCalculator";
 import { AppStyles } from "@/app/AppStyles";
-import { PatrimonioTab } from "@/features/patrimonio/PatrimonioTab";
+import { WealthTab } from "@/features/wealth/components/WealthTab";
 import { PresupuestoTab } from "@/features/presupuesto/PresupuestoTab";
 import { MetasTab } from "@/features/metas/MetasTab";
 
@@ -33,8 +34,8 @@ type TabId = "patrimonio" | "presupuesto" | "metas";
    ============================================================================ */
 export default function FinanzasApp(): React.JSX.Element {
   const [tab, setTab] = useState<TabId>("patrimonio");
-  const [cartera, setCartera] = useState<Posicion[]>(CARTERA_INICIAL);
-  const [historico] = useState<PuntoHistorico[]>(HISTORICO_INICIAL);
+  const [cartera, setCartera] = useState<Position[]>(PORTFOLIO_INITIAL);
+  const [historico] = useState<PortfolioHistoryPoint[]>(PRICE_HISTORY_INITIAL);
   const [deudas, setDeudas] = useState<Debt[]>(DEBTS_INITIAL);
   const [presupuestoBase, setPresupuestoBase] = useState<PresupuestoBase>(PRESUPUESTO_BASE_INICIAL);
   const [meses, setMeses] = useState<Mes[]>(MESES_INICIAL);
@@ -46,7 +47,7 @@ export default function FinanzasApp(): React.JSX.Element {
   const [condicionesBTC, setCondicionesBTC] = useState<CondicionesBTC>({ prescindible: true, dcaActivo: true });
   const [contarCoche, setContarCoche] = useState<boolean>(true);
 
-  const derivada = useMemo(() => carteraCalculator.derivar(cartera), [cartera]);
+  const derivada = useMemo(() => portfolioCalculator.derive(cartera), [cartera]);
 
   const TABS: Array<{ id: TabId; label: string }> = [
     { id: "patrimonio",  label: "Patrimonio" },
@@ -73,7 +74,7 @@ export default function FinanzasApp(): React.JSX.Element {
       </header>
 
       {tab === "patrimonio" && (
-        <PatrimonioTab cartera={cartera} setCartera={setCartera} historico={historico} derivada={derivada} deudas={deudas} />
+        <WealthTab portfolio={cartera} setPortfolio={setCartera} priceHistory={historico} portfolioDerived={derivada} debts={deudas} />
       )}
       {tab === "presupuesto" && (
         <PresupuestoTab presupuestoBase={presupuestoBase} setPresupuestoBase={setPresupuestoBase} meses={meses} setMeses={setMeses} gastosFijosItems={gastosFijosItems} setGastosFijosItems={setGastosFijosItems} />

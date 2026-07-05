@@ -1,21 +1,3 @@
-export type TipoPosicion = "fondo" | "etf" | "cripto" | "efectivo";
-export type GrupoPosicion = "rv" | "btc" | "liquidez";
-
-export interface Posicion {
-  id: string;
-  nombre: string;
-  ticker: string;
-  tipo: TipoPosicion;
-  participaciones: number;
-  precio: number;
-  grupo: GrupoPosicion;
-}
-
-export interface PuntoHistorico {
-  mes: string;
-  total: number;
-}
-
 export type CategoriaId = "gastosFijos" | "inversion" | "fondoEmergencia" | "ocio" | "caprichos";
 export type TipoCategoria = "gasto" | "ahorro";
 
@@ -75,15 +57,4 @@ export interface Fase {
 export interface CondicionesBTC {
   prescindible: boolean;
   dcaActivo: boolean;
-}
-
-export interface CompItem {
-  n: string;
-  v: number;
-}
-
-export interface Composicion {
-  nombre: string;
-  paises: CompItem[];
-  sectores: CompItem[];
 }
