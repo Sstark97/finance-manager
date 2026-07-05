@@ -2,18 +2,17 @@
 
 import React, { useState, useMemo } from "react";
 import { palette } from "@/lib/theme";
-import type { Mes, PresupuestoBase, GastoFijoItem, CondicionesBTC } from "@/domain/types";
+import type { CondicionesBTC } from "@/domain/types";
 import type { Debt } from "@/shared/domain/types";
 import { DEBTS_INITIAL } from "@/shared/data/debts";
 import type { Position, PortfolioHistoryPoint } from "@/features/wealth/domain/types";
 import { PORTFOLIO_INITIAL, PRICE_HISTORY_INITIAL } from "@/features/wealth/data/portfolio";
-import {
-  PRESUPUESTO_BASE_INICIAL, GASTOS_FIJOS_INICIAL, MESES_INICIAL,
-} from "@/data/initial-state";
 import { portfolioCalculator } from "@/features/wealth/domain/PortfolioCalculator";
+import type { Month, Budget, FixedExpenseItem } from "@/features/budget/domain/types";
+import { BUDGET_BASE_INITIAL, FIXED_EXPENSES_INITIAL, MONTHS_INITIAL } from "@/features/budget/data/budget";
 import { AppStyles } from "@/app/AppStyles";
 import { WealthTab } from "@/features/wealth/components/WealthTab";
-import { PresupuestoTab } from "@/features/presupuesto/PresupuestoTab";
+import { BudgetTab } from "@/features/budget/components/BudgetTab";
 import { MetasTab } from "@/features/metas/MetasTab";
 
 /* ============================================================================
@@ -37,9 +36,9 @@ export default function FinanzasApp(): React.JSX.Element {
   const [cartera, setCartera] = useState<Position[]>(PORTFOLIO_INITIAL);
   const [historico] = useState<PortfolioHistoryPoint[]>(PRICE_HISTORY_INITIAL);
   const [deudas, setDeudas] = useState<Debt[]>(DEBTS_INITIAL);
-  const [presupuestoBase, setPresupuestoBase] = useState<PresupuestoBase>(PRESUPUESTO_BASE_INICIAL);
-  const [meses, setMeses] = useState<Mes[]>(MESES_INICIAL);
-  const [gastosFijosItems, setGastosFijosItems] = useState<GastoFijoItem[]>(GASTOS_FIJOS_INICIAL);
+  const [presupuestoBase, setPresupuestoBase] = useState<Budget>(BUDGET_BASE_INITIAL);
+  const [meses, setMeses] = useState<Month[]>(MONTHS_INITIAL);
+  const [gastosFijosItems, setGastosFijosItems] = useState<FixedExpenseItem[]>(FIXED_EXPENSES_INITIAL);
   const [salarioActual, setSalarioActual] = useState<number>(27000);
   const [aportacionFI, setAportacionFI] = useState<number>(293);
   const [rentabilidadFI, setRentabilidadFI] = useState<number>(0.07);
@@ -77,7 +76,7 @@ export default function FinanzasApp(): React.JSX.Element {
         <WealthTab portfolio={cartera} setPortfolio={setCartera} priceHistory={historico} portfolioDerived={derivada} debts={deudas} />
       )}
       {tab === "presupuesto" && (
-        <PresupuestoTab presupuestoBase={presupuestoBase} setPresupuestoBase={setPresupuestoBase} meses={meses} setMeses={setMeses} gastosFijosItems={gastosFijosItems} setGastosFijosItems={setGastosFijosItems} />
+        <BudgetTab baseBudget={presupuestoBase} setBaseBudget={setPresupuestoBase} months={meses} setMonths={setMeses} fixedExpenseItems={gastosFijosItems} setFixedExpenseItems={setGastosFijosItems} />
       )}
       {tab === "metas" && (
         <MetasTab

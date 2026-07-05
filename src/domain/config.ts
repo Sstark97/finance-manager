@@ -1,4 +1,4 @@
-import type { Categoria, CategoriaEvento, CategoriaId, Fase } from "@/domain/types";
+import type { Fase } from "@/domain/types";
 
 // --------- METAS ---------------------------------------------------------
 export const OBJETIVO_FI = { capital: 750000, edadActual: 28, edadObjetivo: 50, rentaMensual: 2250 };
@@ -12,15 +12,3 @@ export const FASES: Fase[] = [
   { id: 4, nombre: "Consolidación + Oro",          edad: "40–45", salarioMin: 65000, carteraMin: 200000, desc: "Oro 5–10% (ETC físico). Renta fija 15–20%. Private Equity (máx 5%) si cartera >300K." },
   { id: 5, nombre: "Protección pre-retiro",        edad: "45–50", salarioMin: 65000, carteraMin: 400000, desc: "RV 65–70% / RF 20–25% / Oro 5–10%. Bitcoin: venta parcial si >30% del patrimonio." },
 ];
-
-export const CATEGORIAS: Categoria[] = [
-  { id: "gastosFijos",     nombre: "Gastos fijos",              tipo: "gasto"  },
-  { id: "inversion",       nombre: "Inversión",                 tipo: "ahorro" },
-  { id: "fondoEmergencia", nombre: "Fondo emergencia / casa",   tipo: "ahorro" },
-  { id: "ocio",            nombre: "Ocio",                      tipo: "gasto"  },
-  { id: "caprichos",       nombre: "Caprichos / tech",          tipo: "gasto"  },
-];
-
-export const CATEGORIA_LABEL: Partial<Record<CategoriaEvento, string>> = Object.fromEntries(
-  CATEGORIAS.map((categoria): [CategoriaId, string] => [categoria.id, categoria.nombre]),
-);
