@@ -1,7 +1,7 @@
 import { generateId } from "@/lib/format";
 import { crearMes } from "@/domain/presupuesto/mes";
 import type {
-  Deuda, GastoFijoItem, Mes, Posicion, PresupuestoBase, PuntoHistorico,
+  GastoFijoItem, Mes, Posicion, PresupuestoBase, PuntoHistorico,
 } from "@/domain/types";
 
 // --------- CARTERA INICIAL (edítala desde la propia interfaz) ----------------
@@ -18,14 +18,6 @@ export const CARTERA_INICIAL: Posicion[] = [
 export const HISTORICO_INICIAL: PuntoHistorico[] = [
   { mes: "Feb 26", total: 618 }, { mes: "Mar 26", total: 1046 },
   { mes: "Abr 26", total: 1300 }, { mes: "May 26", total: 1450 }, { mes: "Jun 26", total: 1561 },
-];
-
-// --------- DEUDAS INICIALES (edítalas desde la pestaña Metas) ---------------
-export const DEUDAS_INICIAL: Deuda[] = [
-  { id: "coche",      nombre: "Coche (financiación)",              cuota: 173.28, saldo: 8000, nota: "En curso, sin fecha de fin fija" },
-  { id: "applewatch", nombre: "Apple Watch (revolving 24% TAE)",   cuota: 75,     saldo: 105,  nota: "Liquidar antes del 10 de julio 2026", limite: "2026-07-10" },
-  { id: "kindle",     nombre: "Kindle",                            cuota: 44,     saldo: 132,  nota: "Liquida en septiembre 2026" },
-  { id: "ledger",     nombre: "Ledger Nano X (3 plazos)",          cuota: 39.53,  saldo: 79.06, nota: "Financiada jul–ago–sep 2026" },
 ];
 
 // --------- PRESUPUESTO ------------------------------------------------------

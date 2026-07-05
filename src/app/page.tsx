@@ -2,9 +2,11 @@
 
 import React, { useState, useMemo } from "react";
 import { palette } from "@/lib/theme";
-import type { Posicion, PuntoHistorico, Deuda, Mes, PresupuestoBase, GastoFijoItem, CondicionesBTC } from "@/domain/types";
+import type { Posicion, PuntoHistorico, Mes, PresupuestoBase, GastoFijoItem, CondicionesBTC } from "@/domain/types";
+import type { Debt } from "@/shared/domain/types";
+import { DEBTS_INITIAL } from "@/shared/data/debts";
 import {
-  CARTERA_INICIAL, HISTORICO_INICIAL, DEUDAS_INICIAL,
+  CARTERA_INICIAL, HISTORICO_INICIAL,
   PRESUPUESTO_BASE_INICIAL, GASTOS_FIJOS_INICIAL, MESES_INICIAL,
 } from "@/data/initial-state";
 import { carteraCalculator } from "@/domain/CarteraCalculator";
@@ -33,7 +35,7 @@ export default function FinanzasApp(): React.JSX.Element {
   const [tab, setTab] = useState<TabId>("patrimonio");
   const [cartera, setCartera] = useState<Posicion[]>(CARTERA_INICIAL);
   const [historico] = useState<PuntoHistorico[]>(HISTORICO_INICIAL);
-  const [deudas, setDeudas] = useState<Deuda[]>(DEUDAS_INICIAL);
+  const [deudas, setDeudas] = useState<Debt[]>(DEBTS_INITIAL);
   const [presupuestoBase, setPresupuestoBase] = useState<PresupuestoBase>(PRESUPUESTO_BASE_INICIAL);
   const [meses, setMeses] = useState<Mes[]>(MESES_INICIAL);
   const [gastosFijosItems, setGastosFijosItems] = useState<GastoFijoItem[]>(GASTOS_FIJOS_INICIAL);

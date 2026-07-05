@@ -3,16 +3,17 @@
 import React, { useMemo } from "react";
 import { palette } from "@/lib/theme";
 import { formatEuro, formatEuroWithCents, formatPercent } from "@/lib/format";
-import type { Deuda, Fase, CondicionesBTC } from "@/domain/types";
+import type { Fase, CondicionesBTC } from "@/domain/types";
+import type { Debt } from "@/shared/domain/types";
 import { OBJETIVOS, OBJETIVO_FI, OBJETIVO_VIVIENDA, OBJETIVO_BTC_OP, FASES } from "@/domain/config";
 import type { CarteraDerivada } from "@/domain/CarteraCalculator";
 import { proyeccionFinancieraCalculator } from "@/domain/ProyeccionFinancieraCalculator";
-import { Metric } from "@/components/Metric";
+import { Metric } from "@/shared/ui/Metric";
 
 export interface MetasTabProps {
   derivada: CarteraDerivada;
-  deudas: Deuda[];
-  setDeudas: React.Dispatch<React.SetStateAction<Deuda[]>>;
+  deudas: Debt[];
+  setDeudas: React.Dispatch<React.SetStateAction<Debt[]>>;
   salarioActual: number;
   setSalarioActual: React.Dispatch<React.SetStateAction<number>>;
   aportacionFI: number;
@@ -27,7 +28,7 @@ export interface MetasTabProps {
   setContarCoche: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-type CampoDeudaEditable = "cuota" | "saldo";
+type CampoDeudaEditable = "installment" | "balance";
 
 export function MetasTab({
   derivada, deudas, setDeudas,
@@ -41,17 +42,17 @@ export function MetasTab({
   const { total, invertido, liquidezTotal } = derivada;
 
   const deudaCoche = deudas.find(d => d.id === "coche");
-  const deudaTotal = deudas.reduce((s,d)=>s+(d.saldo||0),0);
-  const deudaSinCoche = deudaTotal - (deudaCoche?.saldo || 0);
+  const deudaTotal = deudas.reduce((s,d)=>s+(d.balance||0),0);
+  const deudaSinCoche = deudaTotal - (deudaCoche?.balance || 0);
   const patrimonioNeto = contarCoche ? total - deudaSinCoche : total - deudaTotal;
 
   const editarDeuda = (id: string, campo: CampoDeudaEditable, valor: string): void => setDeudas(ds => ds.map(d => d.id===id ? { ...d, [campo]: parseFloat(valor)||0 } : d));
-  const marcarLiquidada = (id: string): void => setDeudas(ds => ds.map(d => d.id===id ? { ...d, saldo: 0 } : d));
+  const marcarLiquidada = (id: string): void => setDeudas(ds => ds.map(d => d.id===id ? { ...d, balance: 0 } : d));
 
   const diasApplewatch = useMemo((): number | null => {
     const d = deudas.find(x => x.id === "applewatch");
-    if (!d || d.saldo <= 0 || !d.limite) return null;
-    return Math.ceil((new Date(d.limite).getTime() - new Date().getTime()) / 86400000);
+    if (!d || d.balance <= 0 || !d.deadline) return null;
+    return Math.ceil((new Date(d.deadline).getTime() - new Date().getTime()) / 86400000);
   }, [deudas]);
 
   const proyeccion = useMemo(() => proyeccionFinancieraCalculator.proyectar({
@@ -78,7 +79,7 @@ export function MetasTab({
             <span style={{ fontSize:22 }}>⚠</span>
             <div>
               <div style={{ fontSize:14, color:palette.ink, fontWeight:600 }}>Liquidar Apple Watch (revolving 24% TAE)</div>
-              <div style={{ fontSize:12.5, color:palette.sub, marginTop:2 }}>Quedan <strong style={{color:palette.ink}}>{diasApplewatch} día{diasApplewatch===1?"":"s"}</strong> antes del 10 de julio de 2026. Saldo: {formatEuroWithCents(deudas.find(d=>d.id==="applewatch")?.saldo || 0)}. Pasa la tarjeta a pago total y no la vuelvas a usar en revolving.</div>
+              <div style={{ fontSize:12.5, color:palette.sub, marginTop:2 }}>Quedan <strong style={{color:palette.ink}}>{diasApplewatch} día{diasApplewatch===1?"":"s"}</strong> antes del 10 de julio de 2026. Saldo: {formatEuroWithCents(deudas.find(d=>d.id==="applewatch")?.balance || 0)}. Pasa la tarjeta a pago total y no la vuelvas a usar en revolving.</div>
             </div>
           </div>
         </div>
@@ -152,16 +153,16 @@ export function MetasTab({
         {deudas.map(d => (
           <div key={d.id} className="deuda-row" style={{ marginBottom:12, paddingBottom:12, borderBottom:`1px solid ${palette.line}` }}>
             <div>
-              <div style={{ fontSize:13, color:palette.ink }}>{d.nombre}</div>
-              <div style={{ fontSize:11, color: d.limite ? palette.warn : palette.faint, marginTop:2 }}>{d.nota}</div>
+              <div style={{ fontSize:13, color:palette.ink }}>{d.name}</div>
+              <div style={{ fontSize:11, color: d.deadline ? palette.warn : palette.faint, marginTop:2 }}>{d.note}</div>
             </div>
             <label>
               <div style={{ fontSize:10.5, color:palette.faint, marginBottom:2 }}>Cuota/mes</div>
-              <input className="inp" type="number" step="any" value={d.cuota} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>editarDeuda(d.id,"cuota",event.target.value)} />
+              <input className="inp" type="number" step="any" value={d.installment} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>editarDeuda(d.id,"installment",event.target.value)} />
             </label>
             <label>
               <div style={{ fontSize:10.5, color:palette.faint, marginBottom:2 }}>Saldo pendiente</div>
-              <input className="inp" type="number" step="any" value={d.saldo} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>editarDeuda(d.id,"saldo",event.target.value)} />
+              <input className="inp" type="number" step="any" value={d.balance} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>editarDeuda(d.id,"balance",event.target.value)} />
             </label>
             <button className="seg" onClick={()=>marcarLiquidada(d.id)} title="Marcar como liquidada">Liquidar</button>
           </div>

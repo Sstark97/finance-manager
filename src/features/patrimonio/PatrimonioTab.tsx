@@ -7,11 +7,12 @@ import {
 } from "recharts";
 import { palette, seriesColorAt } from "@/lib/theme";
 import { formatEuro, formatEuroWithCents, formatPercent, generateId } from "@/lib/format";
-import type { Posicion, PuntoHistorico, Deuda, TipoPosicion, CompItem } from "@/domain/types";
+import type { Posicion, PuntoHistorico, TipoPosicion, CompItem } from "@/domain/types";
+import type { Debt } from "@/shared/domain/types";
 import { OBJETIVOS, COMPOSICION } from "@/domain/config";
 import type { CarteraDerivada } from "@/domain/CarteraCalculator";
 import { fetchYahooPrice } from "@/infrastructure/precios";
-import { Metric } from "@/components/Metric";
+import { Metric } from "@/shared/ui/Metric";
 
 interface Alerta {
   t: "good" | "warn" | "bad";
@@ -25,7 +26,7 @@ export interface PatrimonioTabProps {
   setCartera: React.Dispatch<React.SetStateAction<Posicion[]>>;
   historico: PuntoHistorico[];
   derivada: CarteraDerivada;
-  deudas: Deuda[];
+  deudas: Debt[];
 }
 
 type CampoPosicionEditable = "nombre" | "tipo" | "ticker" | "participaciones" | "precio";
@@ -43,13 +44,13 @@ export function PatrimonioTab({ cartera, setCartera, historico, derivada, deudas
   const variacion = total - ultimoHist;
   const variacionPct = ultimoHist ? (variacion / ultimoHist) * 100 : 0;
 
-  const deudaTotal = deudas.reduce((s,d)=>s+(d.saldo||0),0);
+  const deudaTotal = deudas.reduce((s,d)=>s+(d.balance||0),0);
   const patrimonioNeto = total - deudaTotal;
 
   const diasApplewatch = useMemo((): number | null => {
     const d = deudas.find(x => x.id === "applewatch");
-    if (!d || d.saldo <= 0 || !d.limite) return null;
-    const dias = Math.ceil((new Date(d.limite).getTime() - new Date().getTime()) / 86400000);
+    if (!d || d.balance <= 0 || !d.deadline) return null;
+    const dias = Math.ceil((new Date(d.deadline).getTime() - new Date().getTime()) / 86400000);
     return dias;
   }, [deudas]);
 

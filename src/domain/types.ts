@@ -16,15 +16,6 @@ export interface PuntoHistorico {
   total: number;
 }
 
-export interface Deuda {
-  id: string;
-  nombre: string;
-  cuota: number;
-  saldo: number;
-  nota: string;
-  limite?: string;
-}
-
 export type CategoriaId = "gastosFijos" | "inversion" | "fondoEmergencia" | "ocio" | "caprichos";
 export type TipoCategoria = "gasto" | "ahorro";
 
