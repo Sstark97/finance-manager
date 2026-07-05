@@ -31,7 +31,37 @@
       "Bash(rtk proxy *)",
       "Bash(mv progress/PLAN-vertical-slice-english-rename.md review/PLAN-vertical-slice-english-rename.md)",
       "Bash(mkdir -p /Users/aitorsantana/Documents/dev/projects/finance_manager/.claude/workspace/review)",
-      "Bash(mv /Users/aitorsantana/Documents/dev/projects/finance_manager/.claude/workspace/progress/PLAN-vertical-slice-english-rename.md /Users/aitorsantana/Documents/dev/projects/finance_manager/.claude/workspace/review/PLAN-vertical-slice-english-rename.md)"
+      "Bash(mv /Users/aitorsantana/Documents/dev/projects/finance_manager/.claude/workspace/progress/PLAN-vertical-slice-english-rename.md /Users/aitorsantana/Documents/dev/projects/finance_manager/.claude/workspace/review/PLAN-vertical-slice-english-rename.md)",
+      "Bash(rtk find *)",
+      "WebSearch",
+      "Bash(python3 -c ' *)",
+      "Bash(echo \"---exit $?---\")",
+      "Bash(mkdir -p /Users/aitorsantana/Documents/dev/projects/finance_manager/.claude/workspace/planning)",
+      "Bash(node -e ' *)",
+      "Bash(./node_modules/.bin/eslint src/features/wealth/components/WealthTab.tsx)",
+      "Bash(node -e \"console.log\\(Intl.DateTimeFormat\\(\\).resolvedOptions\\(\\).timeZone\\)\")",
+      "Bash(/usr/bin/grep -n \"firstHistoryTotal\\\\|changePercent\\\\|const change\" src/features/wealth/components/WealthTab.tsx)",
+      "Bash(/usr/bin/grep -n \"liquidityTotal\" src/features/wealth/domain/PortfolioCalculator.ts)",
+      "Bash(mv .claude/workspace/review/PLAN-portfolio-history-range.md .claude/workspace/completed/PLAN-portfolio-history-range.md)",
+      "Bash(mv .claude/workspace/review/REVIEW-portfolio-history-range.md .claude/workspace/completed/REVIEW-portfolio-history-range.md)",
+      "Bash(rm .claude/workspace/WIP.md)",
+      "Bash(/usr/bin/grep -n \"acc\\\\|bad\\\\|warn\\\\|faint\\\\|panel2\\\\|line:\" src/lib/theme.ts)",
+      "Bash(lsof -i :3000 -sTCP:LISTEN)",
+      "Bash(rtk ps *)",
+      "Bash(/usr/bin/grep -A5 '\"scripts\"')",
+      "Bash(pnpm dev *)",
+      "Bash(npx next *)",
+      "mcp__chrome-devtools__navigate_page",
+      "mcp__chrome-devtools__list_pages",
+      "Bash(/usr/bin/grep -i \"chrome\")",
+      "Bash(/usr/bin/grep -v grep)",
+      "Bash(/usr/bin/grep \"chrome-devtools-mcp\")",
+      "Bash(/usr/bin/grep -i lock)",
+      "Bash(rm /Users/aitorsantana/.cache/chrome-devtools-mcp/chrome-profile/SingletonLock *)"
+    ],
+    "additionalDirectories": [
+      "/Users/aitorsantana/Documents/dev/projects/finance_manager/.claude/workspace/planning",
+      "/Users/aitorsantana/.cache/chrome-devtools-mcp/chrome-profile"
     ]
   }
 }
