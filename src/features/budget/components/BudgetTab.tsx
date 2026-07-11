@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, BarChart, Bar, Legend
@@ -40,7 +40,7 @@ export function BudgetTab({ baseBudget, setBaseBudget, months, setMonths, fixedE
   const [baseDraft, setBaseDraft] = useState<BudgetDraft>(() => ({ ...baseBudget, fixedExpenseItems }));
   const [newFixedExpense, setNewFixedExpense] = useState<{ name: string; amount: string }>({ name:"", amount:"" });
 
-  const draftFixedExpensesTotal = useMemo(() => baseDraft.fixedExpenseItems.reduce((sum,item)=>sum+(item.amount||0),0), [baseDraft.fixedExpenseItems]);
+  const draftFixedExpensesTotal = baseDraft.fixedExpenseItems.reduce((sum,item)=>sum+(item.amount||0),0);
 
   const startBaseEditing = (): void => {
     setBaseDraft({ ...baseBudget, fixedExpenseItems: fixedExpenseItems.map(item => ({ ...item })) });
@@ -73,12 +73,12 @@ export function BudgetTab({ baseBudget, setBaseBudget, months, setMonths, fixedE
     setNewFixedExpense({ name:"", amount:"" });
   };
 
-  const availableMonths = useMemo(() => months.filter(month => isMonthAvailable(month.date)), [months]);
+  const availableMonths = months.filter(month => isMonthAvailable(month.date));
   const lastAvailableId = availableMonths[availableMonths.length - 1]?.id;
 
   const [monthId, setMonthId] = useState<string | undefined>(lastAvailableId);
   const [newEvent, setNewEvent] = useState<{ name: string; amount: string; category: EventCategory }>({ name:"", amount:"", category:"gastosFijos" });
-  const [breakdownOpen, setBreakdownOpen] = useState<boolean>(true);
+  const [breakdownOpen, setBreakdownOpen] = useState<boolean>(false);
   const [saved, setSaved] = useState<boolean>(false);
 
   // Si el mes seleccionado deja de estar disponible (no debería, pero por seguridad), se deriva
@@ -87,7 +87,7 @@ export function BudgetTab({ baseBudget, setBaseBudget, months, setMonths, fixedE
 
   const monthIndex = months.findIndex(month => month.id === effectiveMonthId);
   const month = months[monthIndex] ?? months[months.length - 1];
-  const result = useMemo(() => monthlyBudgetCalculator.calculate(month, baseBudget), [month, baseBudget]);
+  const result = monthlyBudgetCalculator.calculate(month, baseBudget);
 
   // --------- Borrador editable del desglose: no toca "months" hasta pulsar Guardar ---------
   const [draft, setDraft] = useState<BreakdownDraft>({ netIncomeOverride: month.netIncomeOverride, overrides: month.overrides, actual: month.actual });
@@ -98,7 +98,7 @@ export function BudgetTab({ baseBudget, setBaseBudget, months, setMonths, fixedE
     setSaved(false);
   }
 
-  const draftResult = useMemo(() => monthlyBudgetCalculator.calculate({ ...month, netIncomeOverride: draft.netIncomeOverride, overrides: draft.overrides, actual: draft.actual }, baseBudget), [month, draft, baseBudget]);
+  const draftResult = monthlyBudgetCalculator.calculate({ ...month, netIncomeOverride: draft.netIncomeOverride, overrides: draft.overrides, actual: draft.actual }, baseBudget);
 
   const hasUnsavedChanges = JSON.stringify(draft) !== JSON.stringify({ netIncomeOverride: month.netIncomeOverride, overrides: month.overrides, actual: month.actual });
 
@@ -139,7 +139,7 @@ export function BudgetTab({ baseBudget, setBaseBudget, months, setMonths, fixedE
     Real: result.actual[category.id] != null ? result.actual[category.id] : result.values[category.id],
   }));
 
-  const annualEvolution = useMemo(() => months.map(item => {
+  const annualEvolution = months.map(item => {
     const monthResult = monthlyBudgetCalculator.calculate(item, baseBudget);
     const savingsBudgeted = monthResult.values.inversion + monthResult.values.fondoEmergencia;
     const expenseBudgeted = monthResult.values.gastosFijos + monthResult.values.ocio + monthResult.values.caprichos;
@@ -148,7 +148,7 @@ export function BudgetTab({ baseBudget, setBaseBudget, months, setMonths, fixedE
     const savingsActual = savingsRegistered ? (monthResult.actual.inversion ?? monthResult.values.inversion) + (monthResult.actual.fondoEmergencia ?? monthResult.values.fondoEmergencia) : null;
     const expenseActual = expenseRegistered ? (monthResult.actual.gastosFijos ?? monthResult.values.gastosFijos) + (monthResult.actual.ocio ?? monthResult.values.ocio) + (monthResult.actual.caprichos ?? monthResult.values.caprichos) : null;
     return { month: item.label, savingsBudgeted, savingsActual, expenseBudgeted, expenseActual };
-  }), [months, baseBudget]);
+  });
 
   const baseDonutData = CATEGORIES.map((category,index) => ({ name: category.name, value: baseBudget[category.id], color: seriesColorAt(index) }));
   const draftUnassigned = baseDraft.ingresoNeto - (draftFixedExpensesTotal + baseDraft.inversion + baseDraft.fondoEmergencia + baseDraft.ocio + baseDraft.caprichos);
@@ -261,7 +261,7 @@ export function BudgetTab({ baseBudget, setBaseBudget, months, setMonths, fixedE
         </div>
       </div>
 
-      <div className="card span-2">
+      <div className="card span-full">
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:10 }}>
           <button className="eyebrow" onClick={()=>setBreakdownOpen(previous=>!previous)} style={{ background:"none", border:"none", padding:0, display:"flex", alignItems:"center", gap:8 }}>
             <span style={{ display:"inline-block", transition:".15s", transform: breakdownOpen?"rotate(90deg)":"rotate(0deg)" }}>▸</span>
@@ -342,7 +342,7 @@ export function BudgetTab({ baseBudget, setBaseBudget, months, setMonths, fixedE
         )}
       </div>
 
-      <div className="card">
+      <div className="card span-full">
         <div className="eyebrow" style={{ marginBottom:14 }}>{month.label} · presupuestado vs real</div>
         <ResponsiveContainer width="100%" height={260}>
           <BarChart data={monthChartData} margin={{ left:-16, right:8, top:6 }}>

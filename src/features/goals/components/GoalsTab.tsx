@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React from "react";
 import { palette } from "@/lib/theme";
 import { formatEuro, formatEuroWithCents, formatPercent } from "@/lib/format";
 import type { Phase, BtcConditions } from "@/features/goals/domain/types";
@@ -50,23 +50,23 @@ export function GoalsTab({
   const editDebt = (id: string, field: EditableDebtField, value: string): void => setDebts(debtList => debtList.map(debt => debt.id===id ? { ...debt, [field]: parseFloat(value)||0 } : debt));
   const markSettled = (id: string): void => setDebts(debtList => debtList.map(debt => debt.id===id ? { ...debt, balance: 0 } : debt));
 
-  const appleWatchDaysLeft = useMemo((): number | null => {
+  const appleWatchDaysLeft = ((): number | null => {
     const debt = debts.find(x => x.id === "applewatch");
     if (!debt || debt.balance <= 0 || !debt.deadline) return null;
     return Math.ceil((new Date(debt.deadline).getTime() - new Date().getTime()) / 86400000);
-  }, [debts]);
+  })();
 
-  const projection = useMemo(() => financialProjectionCalculator.project({
+  const projection = financialProjectionCalculator.project({
     initial: total, contribution: fiContribution, annualReturn: fiReturn, target: FI_GOAL.capital,
-  }), [total, fiContribution, fiReturn]);
+  });
   const fiYears: number | null = projection.months ? projection.months/12 : null;
   const fiTargetYear: number | null = projection.months && fiYears != null ? new Date().getFullYear() + Math.ceil(fiYears) : null;
   const fiTargetAge: number | null = projection.months && fiYears != null ? (FI_GOAL.currentAge + fiYears) : null;
 
-  const currentPhase = useMemo((): Phase => {
+  const currentPhase = ((): Phase => {
     const reached = PHASES.filter(phase => currentSalary >= phase.minSalary && total >= phase.minPortfolio);
     return reached.length ? reached[reached.length-1] : PHASES[0];
-  }, [currentSalary, total]);
+  })();
   const nextPhase = PHASES.find(phase => phase.id === currentPhase.id + 1);
 
   const emergencyFundMet = liquidityTotal >= TARGETS.minimumFund;

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   LineChart, Line, XAxis, YAxis, ReferenceLine, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, BarChart, Bar
@@ -59,14 +59,14 @@ export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts }: 
   const totalDebt = debts.reduce((sum,debt)=>sum+(debt.balance||0),0);
   const netWorth = total - totalDebt;
 
-  const appleWatchDaysLeft = useMemo((): number | null => {
+  const appleWatchDaysLeft = ((): number | null => {
     const debt = debts.find(x => x.id === "applewatch");
     if (!debt || debt.balance <= 0 || !debt.deadline) return null;
     const daysLeft = Math.ceil((new Date(debt.deadline).getTime() - new Date().getTime()) / 86400000);
     return daysLeft;
-  }, [debts]);
+  })();
 
-  const alerts = useMemo((): Alert[] => {
+  const alerts = ((): Alert[] => {
     const list: Alert[] = [];
     if (appleWatchDaysLeft != null && appleWatchDaysLeft >= 0)
       list.push({ kind: appleWatchDaysLeft <= 3 ? "bad" : "warn", message: `Liquidar Apple Watch: quedan ${appleWatchDaysLeft} día${appleWatchDaysLeft===1?"":"s"} (antes del 10 de julio).` });
@@ -82,9 +82,9 @@ export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts }: 
       list.push({ kind:"good", message:`Fondo de emergencia completo (${formatEuro(TARGETS.emergencyFund)}). Replantea virar a inversión.` });
     if (list.length === 0) list.push({ kind:"good", message:"Todo dentro de plan. Sigue con el DCA." });
     return list;
-  }, [liquidityTotal, btcWeightTotal, total, equity, appleWatchDaysLeft, equityWeightOf]);
+  })();
 
-  const score = useMemo((): { total: number; breakdown: Array<[string, number]> } => {
+  const score = ((): { total: number; breakdown: Array<[string, number]> } => {
     let sum = 0; const breakdown: Array<[string, number]> = [];
     sum += 10*0.15; breakdown.push(["Estructura y fiscalidad", 10]);
     sum += 10*0.10; breakdown.push(["Costes (TER bajos)", 10]);
@@ -97,7 +97,7 @@ export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts }: 
     sum += btcSafe*0.10; breakdown.push(["Riesgo Bitcoin", btcSafe]);
     const size = Math.min(10, 3 + total/8000); sum += size*0.15; breakdown.push(["Tamaño de cartera", size]);
     return { total: sum, breakdown };
-  }, [equity, liquidityTotal, btcWeightTotal, total, equityWeightOf]);
+  })();
 
   const portfolioPie = withValue
     .map((position, index) => ({ name: position.name, value: position.value, color: seriesColorAt(index) }))
@@ -321,7 +321,7 @@ export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts }: 
           </div>
         </div>
 
-        <div className="card">
+        <div className="card span-full">
           <div className="eyebrow" style={{ marginBottom:16 }}>Renta variable · real vs objetivo {stagflation && <span style={{color:palette.warn}}>· estanflación</span>}</div>
           {equityRows.map(([key,label,target]) => {
             const exists = portfolio.some(position => position.id === key);
@@ -377,7 +377,7 @@ export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts }: 
           </div>
         </div>
 
-        <div className="card">
+        <div className={compositionKeys.length > 0 ? "card" : "card span-full"}>
           <div className="eyebrow" style={{ marginBottom:14 }}>Fondo de emergencia / casa</div>
           <div style={{ display:"flex", alignItems:"baseline", gap:8, marginBottom:4 }}>
             <span className="num disp" style={{ fontSize:34, fontWeight:600 }}>{formatEuro(liquidityTotal)}</span>

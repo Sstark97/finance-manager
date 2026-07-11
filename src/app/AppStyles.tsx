@@ -6,7 +6,7 @@ export function AppStyles(): React.JSX.Element {
     <style>{`
       @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=DM+Mono:wght@400;500&display=swap');
       * { box-sizing: border-box; }
-      .grid { display:grid; gap:16px; }
+      .grid { display:grid; gap:16px; align-items:start; }
       .card { background:${palette.panel}; border:1px solid ${palette.line}; border-radius:14px; padding:20px; }
       .eyebrow { font:500 11px/1 'DM Mono',monospace; letter-spacing:.14em; text-transform:uppercase; color:${palette.faint}; }
       .num { font-family:'DM Mono',monospace; font-variant-numeric:tabular-nums; }
