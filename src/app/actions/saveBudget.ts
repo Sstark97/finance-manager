@@ -1,8 +1,8 @@
 "use server";
 
-import { getSaveBudget } from "@/lib/di/container";
-import type { BudgetSnapshot } from "@/features/budget/application/BudgetSnapshot";
+import { container } from "@/lib/di/ContainerDI";
+import type { BudgetSnapshotToSave } from "@/features/budget/application/SaveBudget";
 
-export async function saveBudget(snapshot: BudgetSnapshot): Promise<void> {
-  await getSaveBudget().invoke(snapshot);
+export async function saveBudget(snapshot: BudgetSnapshotToSave): Promise<void> {
+  await container.saveBudget().invoke(snapshot);
 }

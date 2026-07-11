@@ -1,8 +1,8 @@
 "use server";
 
-import { getSaveDebts } from "@/lib/di/container";
+import { container } from "@/lib/di/ContainerDI";
 import type { Debt } from "@/shared/domain/types";
 
 export async function saveDebts(debts: Debt[]): Promise<void> {
-  await getSaveDebts().invoke(debts);
+  await container.saveDebts().invoke(debts);
 }

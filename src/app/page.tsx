@@ -1,10 +1,5 @@
 import type React from "react";
-import {
-  getLoadPortfolio, getSavePortfolio,
-  getLoadDebts, getSaveDebts,
-  getLoadBudget, getSaveBudget,
-  getLoadGoalsSettings, getSaveGoalsSettings,
-} from "@/lib/di/container";
+import { container } from "@/lib/di/ContainerDI";
 import { LoadInitialAppState } from "@/app/LoadInitialAppState";
 import { PORTFOLIO_INITIAL } from "@/features/wealth/data/portfolio";
 import { DEBTS_INITIAL } from "@/shared/data/debts";
@@ -25,14 +20,14 @@ import { FinanceAppShell } from "@/app/FinanceAppShell";
    ============================================================================ */
 export default async function FinanceAppPage(): Promise<React.JSX.Element> {
   const initialState = await new LoadInitialAppState({
-    loadPortfolio: getLoadPortfolio(),
-    savePortfolio: getSavePortfolio(),
-    loadDebts: getLoadDebts(),
-    saveDebts: getSaveDebts(),
-    loadBudget: getLoadBudget(),
-    saveBudget: getSaveBudget(),
-    loadGoalsSettings: getLoadGoalsSettings(),
-    saveGoalsSettings: getSaveGoalsSettings(),
+    loadPortfolio: container.loadPortfolio(),
+    savePortfolio: container.savePortfolio(),
+    loadDebts: container.loadDebts(),
+    saveDebts: container.saveDebts(),
+    loadBudget: container.loadBudget(),
+    saveBudget: container.saveBudget(),
+    loadGoalsSettings: container.loadGoalsSettings(),
+    saveGoalsSettings: container.saveGoalsSettings(),
     seedPortfolio: PORTFOLIO_INITIAL,
     seedDebts: DEBTS_INITIAL,
     seedBudget: { baseBudget: BUDGET_BASE_INITIAL, fixedExpenseItems: FIXED_EXPENSES_INITIAL, months: MONTHS_INITIAL },
@@ -46,12 +41,7 @@ export default async function FinanceAppPage(): Promise<React.JSX.Element> {
       initialBaseBudget={initialState.budget.baseBudget}
       initialFixedExpenseItems={initialState.budget.fixedExpenseItems}
       initialMonths={initialState.budget.months}
-      initialCurrentSalary={initialState.goalsSettings.currentSalary}
-      initialFiContribution={initialState.goalsSettings.fiContribution}
-      initialFiReturn={initialState.goalsSettings.fiReturn}
-      initialBtcSavings={initialState.goalsSettings.btcSavings}
-      initialBtcConditions={initialState.goalsSettings.btcConditions}
-      initialCountCar={initialState.goalsSettings.countCar}
+      initialGoalsSettings={initialState.goalsSettings}
     />
   );
 }

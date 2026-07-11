@@ -16,8 +16,8 @@ describe("TursoBudgetRepository", () => {
     await testDatabase.close();
   });
 
-  it("should throw when the base budget singleton has not been seeded yet", async () => {
-    await expect(repository.findBase()).rejects.toThrow();
+  it("should return null when the base budget singleton has not been seeded yet", async () => {
+    await expect(repository.findBase()).resolves.toBeNull();
   });
 
   it("should round-trip the base budget singleton through saveBase and findBase", async () => {

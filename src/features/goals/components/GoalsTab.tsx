@@ -2,44 +2,41 @@
 
 import React from "react";
 import { palette } from "@/lib/theme";
-import { formatEuro, formatEuroWithCents, formatPercent } from "@/lib/format";
+import { currencyFormatter } from "@/lib/CurrencyFormatter";
+import { idGenerator } from "@/lib/IdGenerator";
 import type { Phase, BtcConditions } from "@/features/goals/domain/types";
 import { FI_GOAL, HOUSING_GOAL, BTC_OP_GOAL, PHASES } from "@/features/goals/domain/config";
 import { TARGETS } from "@/features/wealth/domain/config";
 import type { PortfolioDerived } from "@/features/wealth/domain/PortfolioCalculator";
 import { financialProjectionCalculator } from "@/features/goals/domain/FinancialProjectionCalculator";
 import type { Debt } from "@/shared/domain/types";
+import type { GoalsSettings } from "@/features/goals/application/GoalsSettings";
 import { Metric } from "@/shared/ui/Metric";
+import { GoalsSettingsOnboarding } from "@/features/goals/components/GoalsSettingsOnboarding";
 
 export interface GoalsTabProps {
   portfolioDerived: PortfolioDerived;
   debts: Debt[];
   setDebts: React.Dispatch<React.SetStateAction<Debt[]>>;
-  currentSalary: number;
-  setCurrentSalary: React.Dispatch<React.SetStateAction<number>>;
-  fiContribution: number;
-  setFiContribution: React.Dispatch<React.SetStateAction<number>>;
-  fiReturn: number;
-  setFiReturn: React.Dispatch<React.SetStateAction<number>>;
-  btcSavings: number;
-  setBtcSavings: React.Dispatch<React.SetStateAction<number>>;
-  btcConditions: BtcConditions;
-  setBtcConditions: React.Dispatch<React.SetStateAction<BtcConditions>>;
-  countCar: boolean;
-  setCountCar: React.Dispatch<React.SetStateAction<boolean>>;
+  settings: GoalsSettings | null;
+  setSettings: React.Dispatch<React.SetStateAction<GoalsSettings | null>>;
 }
 
 type EditableDebtField = "installment" | "balance";
 
-export function GoalsTab({
-  portfolioDerived, debts, setDebts,
-  currentSalary, setCurrentSalary,
-  fiContribution, setFiContribution,
-  fiReturn, setFiReturn,
-  btcSavings, setBtcSavings,
-  btcConditions, setBtcConditions,
-  countCar, setCountCar,
-}: GoalsTabProps): React.JSX.Element {
+export function GoalsTab({ portfolioDerived, debts, setDebts, settings, setSettings }: GoalsTabProps): React.JSX.Element {
+  if (settings == null) {
+    return <GoalsSettingsOnboarding onCreateSettings={setSettings} />;
+  }
+
+  const { currentSalary, fiContribution, fiReturn, btcSavings, btcConditions, countCar } = settings;
+  const setCurrentSalary = (value: number): void => setSettings(previous => (previous ? { ...previous, currentSalary: value } : previous));
+  const setFiContribution = (value: number): void => setSettings(previous => (previous ? { ...previous, fiContribution: value } : previous));
+  const setFiReturn = (value: number): void => setSettings(previous => (previous ? { ...previous, fiReturn: value } : previous));
+  const setBtcSavings = (value: number): void => setSettings(previous => (previous ? { ...previous, btcSavings: value } : previous));
+  const updateBtcConditions = (updater: (conditions: BtcConditions) => BtcConditions): void => setSettings(previous => (previous ? { ...previous, btcConditions: updater(previous.btcConditions) } : previous));
+  const setCountCar = (value: boolean): void => setSettings(previous => (previous ? { ...previous, countCar: value } : previous));
+
   const { total, invested, liquidityTotal } = portfolioDerived;
 
   const carDebt = debts.find(debt => debt.id === "coche");
@@ -49,6 +46,7 @@ export function GoalsTab({
 
   const editDebt = (id: string, field: EditableDebtField, value: string): void => setDebts(debtList => debtList.map(debt => debt.id===id ? { ...debt, [field]: parseFloat(value)||0 } : debt));
   const markSettled = (id: string): void => setDebts(debtList => debtList.map(debt => debt.id===id ? { ...debt, balance: 0 } : debt));
+  const addDebt = (): void => setDebts(debtList => [...debtList, { id: idGenerator.generate(), name: "Nueva deuda", installment: 0, balance: 0, note: "" }]);
 
   const appleWatchDaysLeft = ((): number | null => {
     const debt = debts.find(x => x.id === "applewatch");
@@ -80,7 +78,7 @@ export function GoalsTab({
             <span style={{ fontSize:22 }}>⚠</span>
             <div>
               <div style={{ fontSize:14, color:palette.ink, fontWeight:600 }}>Liquidar Apple Watch (revolving 24% TAE)</div>
-              <div style={{ fontSize:12.5, color:palette.sub, marginTop:2 }}>Quedan <strong style={{color:palette.ink}}>{appleWatchDaysLeft} día{appleWatchDaysLeft===1?"":"s"}</strong> antes del 10 de julio de 2026. Saldo: {formatEuroWithCents(debts.find(debt=>debt.id==="applewatch")?.balance || 0)}. Pasa la tarjeta a pago total y no la vuelvas a usar en revolving.</div>
+              <div style={{ fontSize:12.5, color:palette.sub, marginTop:2 }}>Quedan <strong style={{color:palette.ink}}>{appleWatchDaysLeft} día{appleWatchDaysLeft===1?"":"s"}</strong> antes del 10 de julio de 2026. Saldo: {currencyFormatter.euroWithCents(debts.find(debt=>debt.id==="applewatch")?.balance || 0)}. Pasa la tarjeta a pago total y no la vuelvas a usar en revolving.</div>
             </div>
           </div>
         </div>
@@ -89,13 +87,13 @@ export function GoalsTab({
       <div className="card span-2">
         <div className="eyebrow" style={{ marginBottom:8 }}>Libertad financiera</div>
         <div style={{ display:"flex", alignItems:"baseline", gap:10, marginBottom:6 }}>
-          <span className="num disp" style={{ fontSize:32, fontWeight:600 }}>{formatEuro(total)}</span>
-          <span className="num" style={{ color:palette.faint }}>/ {formatEuro(FI_GOAL.capital)}</span>
+          <span className="num disp" style={{ fontSize:32, fontWeight:600 }}>{currencyFormatter.euro(total)}</span>
+          <span className="num" style={{ color:palette.faint }}>/ {currencyFormatter.euro(FI_GOAL.capital)}</span>
         </div>
         <div className="barra" style={{ height:10, marginBottom:10 }}>
           <div className="barra-fill" style={{ width:`${Math.min(100, total/FI_GOAL.capital*100)}%`, background:`linear-gradient(90deg,${palette.faint},${palette.acc})` }} />
         </div>
-        <div style={{ fontSize:12, color:palette.sub, marginBottom:16 }}>{formatPercent(total/FI_GOAL.capital*100)} del objetivo de {formatEuro(FI_GOAL.capital)} (renta de ~{formatEuro(FI_GOAL.monthlyIncome)}/mes, regla del 4%).</div>
+        <div style={{ fontSize:12, color:palette.sub, marginBottom:16 }}>{currencyFormatter.percent(total/FI_GOAL.capital*100)} del objetivo de {currencyFormatter.euro(FI_GOAL.capital)} (renta de ~{currencyFormatter.euro(FI_GOAL.monthlyIncome)}/mes, regla del 4%).</div>
 
         <div className="grid" style={{ gridTemplateColumns:"1fr 1fr", marginBottom:14 }}>
           <label>
@@ -109,7 +107,7 @@ export function GoalsTab({
         </div>
         <div style={{ fontSize:13, lineHeight:1.6, color:palette.ink }}>
           {projection.months && fiYears != null
-            ? <>A este ritmo llegarías a los {formatEuro(FI_GOAL.capital)} en <strong className="num">~{fiYears.toFixed(1)} años</strong> (hacia <strong className="num">{fiTargetYear}</strong>, con ~<strong className="num">{fiTargetAge?.toFixed(0)}</strong> años).</>
+            ? <>A este ritmo llegarías a los {currencyFormatter.euro(FI_GOAL.capital)} en <strong className="num">~{fiYears.toFixed(1)} años</strong> (hacia <strong className="num">{fiTargetYear}</strong>, con ~<strong className="num">{fiTargetAge?.toFixed(0)}</strong> años).</>
             : <>Con estos parámetros no se alcanza el objetivo en un horizonte razonable. Sube la aportación o revisa la rentabilidad esperada.</>}
         </div>
         <div style={{ fontSize:11.5, color:palette.faint, marginTop:8 }}>Estimación con interés compuesto mensual, no es una garantía. El salario, no la rentabilidad, es tu mayor palanca (regla nº8).</div>
@@ -118,8 +116,8 @@ export function GoalsTab({
       <div className="card">
         <div className="eyebrow" style={{ marginBottom:8 }}>Vivienda</div>
         <div style={{ display:"flex", alignItems:"baseline", gap:8, marginBottom:6 }}>
-          <span className="num disp" style={{ fontSize:26, fontWeight:600 }}>{formatEuro(invested)}</span>
-          <span className="num" style={{ color:palette.faint }}>/ {formatEuro(HOUSING_GOAL.criticalMass)}</span>
+          <span className="num disp" style={{ fontSize:26, fontWeight:600 }}>{currencyFormatter.euro(invested)}</span>
+          <span className="num" style={{ color:palette.faint }}>/ {currencyFormatter.euro(HOUSING_GOAL.criticalMass)}</span>
         </div>
         <div className="barra" style={{ marginBottom:10 }}>
           <div className="barra-fill" style={{ width:`${Math.min(100, invested/HOUSING_GOAL.criticalMass*100)}%`, background:palette.acc }} />
@@ -132,14 +130,14 @@ export function GoalsTab({
       <div className="card">
         <div className="eyebrow" style={{ marginBottom:8 }}>Fondo de emergencia</div>
         <div style={{ display:"flex", alignItems:"baseline", gap:8, marginBottom:6 }}>
-          <span className="num disp" style={{ fontSize:26, fontWeight:600 }}>{formatEuro(liquidityTotal)}</span>
-          <span className="num" style={{ color:palette.faint }}>/ {formatEuro(TARGETS.emergencyFund)}</span>
+          <span className="num disp" style={{ fontSize:26, fontWeight:600 }}>{currencyFormatter.euro(liquidityTotal)}</span>
+          <span className="num" style={{ color:palette.faint }}>/ {currencyFormatter.euro(TARGETS.emergencyFund)}</span>
         </div>
         <div className="barra" style={{ marginBottom:10 }}>
           <div className="barra-fill" style={{ width:`${Math.min(100, liquidityTotal/TARGETS.emergencyFund*100)}%`, background: emergencyFundMet ? palette.acc : palette.bad }} />
         </div>
         <div style={{ fontSize:12, color:palette.sub }}>
-          {emergencyFundMet ? "Mínimo intocable cubierto." : `Por debajo del mínimo de ${formatEuro(TARGETS.minimumFund)}: es la prioridad.`} Objetivo 6 meses de gastos (4.900€).
+          {emergencyFundMet ? "Mínimo intocable cubierto." : `Por debajo del mínimo de ${currencyFormatter.euro(TARGETS.minimumFund)}: es la prioridad.`} Objetivo 6 meses de gastos (4.900€).
         </div>
       </div>
 
@@ -151,26 +149,31 @@ export function GoalsTab({
             Contar el coche como activo (neutraliza su deuda)
           </label>
         </div>
-        {debts.map(debt => (
-          <div key={debt.id} className="deuda-row" style={{ marginBottom:12, paddingBottom:12, borderBottom:`1px solid ${palette.line}` }}>
-            <div>
-              <div style={{ fontSize:13, color:palette.ink }}>{debt.name}</div>
-              <div style={{ fontSize:11, color: debt.deadline ? palette.warn : palette.faint, marginTop:2 }}>{debt.note}</div>
+        {debts.length === 0 ? (
+          <div style={{ fontSize:12.5, color:palette.faint, marginBottom:14 }}>Aún no has añadido deudas.</div>
+        ) : (
+          debts.map(debt => (
+            <div key={debt.id} className="deuda-row" style={{ marginBottom:12, paddingBottom:12, borderBottom:`1px solid ${palette.line}` }}>
+              <div>
+                <div style={{ fontSize:13, color:palette.ink }}>{debt.name}</div>
+                <div style={{ fontSize:11, color: debt.deadline ? palette.warn : palette.faint, marginTop:2 }}>{debt.note}</div>
+              </div>
+              <label>
+                <div style={{ fontSize:10.5, color:palette.faint, marginBottom:2 }}>Cuota/mes</div>
+                <input className="inp" type="number" step="any" value={debt.installment} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>editDebt(debt.id,"installment",event.target.value)} />
+              </label>
+              <label>
+                <div style={{ fontSize:10.5, color:palette.faint, marginBottom:2 }}>Saldo pendiente</div>
+                <input className="inp" type="number" step="any" value={debt.balance} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>editDebt(debt.id,"balance",event.target.value)} />
+              </label>
+              <button className="seg" onClick={()=>markSettled(debt.id)} title="Marcar como liquidada">Liquidar</button>
             </div>
-            <label>
-              <div style={{ fontSize:10.5, color:palette.faint, marginBottom:2 }}>Cuota/mes</div>
-              <input className="inp" type="number" step="any" value={debt.installment} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>editDebt(debt.id,"installment",event.target.value)} />
-            </label>
-            <label>
-              <div style={{ fontSize:10.5, color:palette.faint, marginBottom:2 }}>Saldo pendiente</div>
-              <input className="inp" type="number" step="any" value={debt.balance} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>editDebt(debt.id,"balance",event.target.value)} />
-            </label>
-            <button className="seg" onClick={()=>markSettled(debt.id)} title="Marcar como liquidada">Liquidar</button>
-          </div>
-        ))}
-        <div style={{ display:"flex", justifyContent:"space-between", flexWrap:"wrap", gap:12, marginTop:14 }}>
-          <Metric label="Deuda total" value={formatEuro(totalDebt)} sub="suma de saldos pendientes" />
-          <Metric label="Patrimonio neto" value={formatEuro(netWorth)} sub={countCar ? "coche neutralizado" : "coche cuenta como deuda"} />
+          ))
+        )}
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:12, marginTop:14 }}>
+          <Metric label="Deuda total" value={currencyFormatter.euro(totalDebt)} sub="suma de saldos pendientes" />
+          <Metric label="Patrimonio neto" value={currencyFormatter.euro(netWorth)} sub={countCar ? "coche neutralizado" : "coche cuenta como deuda"} />
+          <button className="seg on" onClick={addDebt}>+ Añadir deuda</button>
         </div>
       </div>
 
@@ -195,7 +198,7 @@ export function GoalsTab({
         </div>
         {nextPhase && (
           <div style={{ marginTop:16, paddingTop:14, borderTop:`1px solid ${palette.line}`, fontSize:12.5, color:palette.sub }}>
-            Para desbloquear <strong style={{color:palette.ink}}>Fase {nextPhase.id}</strong> necesitas salario &gt;{formatEuro(nextPhase.minSalary)}{nextPhase.minPortfolio>0 && ` y cartera >${formatEuro(nextPhase.minPortfolio)}`}.
+            Para desbloquear <strong style={{color:palette.ink}}>Fase {nextPhase.id}</strong> necesitas salario &gt;{currencyFormatter.euro(nextPhase.minSalary)}{nextPhase.minPortfolio>0 && ` y cartera >${currencyFormatter.euro(nextPhase.minPortfolio)}`}.
           </div>
         )}
       </div>
@@ -204,9 +207,9 @@ export function GoalsTab({
         <div className="eyebrow" style={{ marginBottom:8 }}>Operación Bitcoin (bear market)</div>
         <div style={{ display:"flex", alignItems:"baseline", gap:8, marginBottom:6 }}>
           <label style={{ display:"flex", alignItems:"center", gap:8 }}>
-            <span className="num disp" style={{ fontSize:26, fontWeight:600 }}>{formatEuro(btcSavings)}</span>
+            <span className="num disp" style={{ fontSize:26, fontWeight:600 }}>{currencyFormatter.euro(btcSavings)}</span>
           </label>
-          <span className="num" style={{ color:palette.faint }}>/ {formatEuro(BTC_OP_GOAL.target)}</span>
+          <span className="num" style={{ color:palette.faint }}>/ {currencyFormatter.euro(BTC_OP_GOAL.target)}</span>
         </div>
         <input className="inp" type="number" step="any" value={btcSavings} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>setBtcSavings(parseFloat(event.target.value)||0)} style={{ maxWidth:160, marginBottom:12 }} />
         <div className="barra" style={{ marginBottom:12 }}>
@@ -218,10 +221,10 @@ export function GoalsTab({
           <input type="checkbox" checked={emergencyFundMet} disabled readOnly /> Fondo de emergencia &gt;1.000€ intacto
         </label>
         <label style={{ display:"flex", gap:8, alignItems:"center", marginBottom:8, fontSize:12.5, color:palette.sub }}>
-          <input type="checkbox" checked={btcConditions.disposable} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>setBtcConditions(conditions=>({...conditions,disposable:event.target.checked}))} /> Dinero prescindible (no del fondo)
+          <input type="checkbox" checked={btcConditions.disposable} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>updateBtcConditions(conditions=>({...conditions,disposable:event.target.checked}))} /> Dinero prescindible (no del fondo)
         </label>
         <label style={{ display:"flex", gap:8, alignItems:"center", fontSize:12.5, color:palette.sub }}>
-          <input type="checkbox" checked={btcConditions.dcaActive} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>setBtcConditions(conditions=>({...conditions,dcaActive:event.target.checked}))} /> El DCA mensual no se pausa
+          <input type="checkbox" checked={btcConditions.dcaActive} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>updateBtcConditions(conditions=>({...conditions,dcaActive:event.target.checked}))} /> El DCA mensual no se pausa
         </label>
       </div>
     </div>

@@ -16,8 +16,8 @@ describe("TursoGoalsSettingsRepository", () => {
     await testDatabase.close();
   });
 
-  it("should throw when the goals settings singleton has not been seeded yet", async () => {
-    await expect(repository.find()).rejects.toThrow();
+  it("should return null when the goals settings singleton has not been seeded yet", async () => {
+    await expect(repository.find()).resolves.toBeNull();
   });
 
   it("should round-trip the goals settings singleton through save and find", async () => {

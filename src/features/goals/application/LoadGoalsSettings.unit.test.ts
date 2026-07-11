@@ -4,9 +4,9 @@ import type { GoalsSettingsRepository } from "@/features/goals/application/Goals
 import type { GoalsSettings } from "@/features/goals/application/GoalsSettings";
 
 class FakeGoalsSettingsRepository implements GoalsSettingsRepository {
-  constructor(private readonly settings: GoalsSettings) {}
+  constructor(private readonly settings: GoalsSettings | null) {}
 
-  async find(): Promise<GoalsSettings> {
+  async find(): Promise<GoalsSettings | null> {
     return this.settings;
   }
 
@@ -26,5 +26,13 @@ describe("LoadGoalsSettings", () => {
     const result = await useCase.invoke();
 
     expect(result).toEqual(settings);
+  });
+
+  it("should propagate null when the settings have not been configured yet", async () => {
+    const useCase = new LoadGoalsSettings(new FakeGoalsSettingsRepository(null));
+
+    const result = await useCase.invoke();
+
+    expect(result).toBeNull();
   });
 });

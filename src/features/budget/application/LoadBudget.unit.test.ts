@@ -5,9 +5,9 @@ import type { MonthRepository } from "@/features/budget/application/MonthReposit
 import type { Budget, FixedExpenseItem, Month } from "@/features/budget/domain/types";
 
 class FakeBudgetRepository implements BudgetRepository {
-  constructor(private readonly base: Budget, private readonly items: FixedExpenseItem[]) {}
+  constructor(private readonly base: Budget | null, private readonly items: FixedExpenseItem[]) {}
 
-  async findBase(): Promise<Budget> {
+  async findBase(): Promise<Budget | null> {
     return this.base;
   }
 
@@ -46,5 +46,13 @@ describe("LoadBudget", () => {
     const snapshot = await useCase.invoke();
 
     expect(snapshot).toEqual({ baseBudget, fixedExpenseItems, months });
+  });
+
+  it("should propagate a null base budget when it has not been configured yet", async () => {
+    const useCase = new LoadBudget(new FakeBudgetRepository(null, []), new FakeMonthRepository([]));
+
+    const snapshot = await useCase.invoke();
+
+    expect(snapshot.baseBudget).toBeNull();
   });
 });

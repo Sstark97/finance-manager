@@ -7,7 +7,7 @@ import { PortfolioHistoryCalculator } from "@/features/wealth/domain/PortfolioHi
 import { RefreshPositionPrices, type RefreshPositionPricesUseCase } from "@/features/wealth/application/RefreshPositionPrices";
 import { ComputePortfolioHistory, type ComputePortfolioHistoryUseCase } from "@/features/wealth/application/ComputePortfolioHistory";
 
-import { TursoClientFactory, toDatabase, type Database } from "@/infrastructure/db/client";
+import { TursoClientFactory, type Database } from "@/infrastructure/db/client";
 
 import { TursoDebtRepository } from "@/shared/infrastructure/TursoDebtRepository";
 import { LoadDebts, type LoadDebtsUseCase } from "@/shared/application/LoadDebts";
@@ -27,57 +27,61 @@ import { TursoGoalsSettingsRepository } from "@/features/goals/infrastructure/Tu
 import { LoadGoalsSettings, type LoadGoalsSettingsUseCase } from "@/features/goals/application/LoadGoalsSettings";
 import { SaveGoalsSettings, type SaveGoalsSettingsUseCase } from "@/features/goals/application/SaveGoalsSettings";
 
-const assetPriceGateway = new CachingAssetPriceGateway(new YahooFinanceAssetPriceGateway());
-const refreshPositionPrices = new RefreshPositionPrices(assetPriceGateway, new PortfolioCalculator());
+export class ContainerDI {
+  private readonly assetPriceGateway = new CachingAssetPriceGateway(new YahooFinanceAssetPriceGateway());
+  private readonly refreshPositionPricesUseCase = new RefreshPositionPrices(this.assetPriceGateway, new PortfolioCalculator());
 
-const assetPriceHistoryGateway = new CachingAssetPriceHistoryGateway(new YahooFinanceAssetPriceHistoryGateway());
-const computePortfolioHistory = new ComputePortfolioHistory(assetPriceHistoryGateway, new PortfolioHistoryCalculator());
+  private readonly assetPriceHistoryGateway = new CachingAssetPriceHistoryGateway(new YahooFinanceAssetPriceHistoryGateway());
+  private readonly computePortfolioHistoryUseCase = new ComputePortfolioHistory(this.assetPriceHistoryGateway, new PortfolioHistoryCalculator());
 
-export function getRefreshPositionPrices(): RefreshPositionPricesUseCase {
-  return refreshPositionPrices;
-}
+  private cachedDatabase: Database | null = null;
 
-export function getComputePortfolioHistory(): ComputePortfolioHistoryUseCase {
-  return computePortfolioHistory;
-}
-
-let cachedDatabase: Database | null = null;
-
-function getDatabase(): Database {
-  if (!cachedDatabase) {
-    cachedDatabase = toDatabase(new TursoClientFactory().create());
+  refreshPositionPrices(): RefreshPositionPricesUseCase {
+    return this.refreshPositionPricesUseCase;
   }
-  return cachedDatabase;
+
+  computePortfolioHistory(): ComputePortfolioHistoryUseCase {
+    return this.computePortfolioHistoryUseCase;
+  }
+
+  loadDebts(): LoadDebtsUseCase {
+    return new LoadDebts(new TursoDebtRepository(this.database()));
+  }
+
+  saveDebts(): SaveDebtsUseCase {
+    return new SaveDebts(new TursoDebtRepository(this.database()));
+  }
+
+  loadPortfolio(): LoadPortfolioUseCase {
+    return new LoadPortfolio(new TursoPortfolioRepository(this.database()));
+  }
+
+  savePortfolio(): SavePortfolioUseCase {
+    return new SavePortfolio(new TursoPortfolioRepository(this.database()));
+  }
+
+  loadBudget(): LoadBudgetUseCase {
+    return new LoadBudget(new TursoBudgetRepository(this.database()), new TursoMonthRepository(this.database()));
+  }
+
+  saveBudget(): SaveBudgetUseCase {
+    return new SaveBudget(new TursoBudgetTransactionRunner(this.database()));
+  }
+
+  loadGoalsSettings(): LoadGoalsSettingsUseCase {
+    return new LoadGoalsSettings(new TursoGoalsSettingsRepository(this.database()));
+  }
+
+  saveGoalsSettings(): SaveGoalsSettingsUseCase {
+    return new SaveGoalsSettings(new TursoGoalsSettingsRepository(this.database()));
+  }
+
+  private database(): Database {
+    if (!this.cachedDatabase) {
+      this.cachedDatabase = TursoClientFactory.toDatabase(new TursoClientFactory().create());
+    }
+    return this.cachedDatabase;
+  }
 }
 
-export function getLoadDebts(): LoadDebtsUseCase {
-  return new LoadDebts(new TursoDebtRepository(getDatabase()));
-}
-
-export function getSaveDebts(): SaveDebtsUseCase {
-  return new SaveDebts(new TursoDebtRepository(getDatabase()));
-}
-
-export function getLoadPortfolio(): LoadPortfolioUseCase {
-  return new LoadPortfolio(new TursoPortfolioRepository(getDatabase()));
-}
-
-export function getSavePortfolio(): SavePortfolioUseCase {
-  return new SavePortfolio(new TursoPortfolioRepository(getDatabase()));
-}
-
-export function getLoadBudget(): LoadBudgetUseCase {
-  return new LoadBudget(new TursoBudgetRepository(getDatabase()), new TursoMonthRepository(getDatabase()));
-}
-
-export function getSaveBudget(): SaveBudgetUseCase {
-  return new SaveBudget(new TursoBudgetTransactionRunner(getDatabase()));
-}
-
-export function getLoadGoalsSettings(): LoadGoalsSettingsUseCase {
-  return new LoadGoalsSettings(new TursoGoalsSettingsRepository(getDatabase()));
-}
-
-export function getSaveGoalsSettings(): SaveGoalsSettingsUseCase {
-  return new SaveGoalsSettings(new TursoGoalsSettingsRepository(getDatabase()));
-}
+export const container = new ContainerDI();

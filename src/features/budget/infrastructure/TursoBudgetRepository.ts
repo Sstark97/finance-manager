@@ -13,10 +13,10 @@ export class TursoBudgetRepository implements BudgetRepository {
     private readonly fixedExpenseItemMapper: FixedExpenseItemRowMapper = new FixedExpenseItemRowMapper(),
   ) {}
 
-  async findBase(): Promise<Budget> {
+  async findBase(): Promise<Budget | null> {
     const [row] = await this.database.select().from(budgetBaseTable).where(eq(budgetBaseTable.id, BUDGET_BASE_SINGLETON_ID));
     if (!row) {
-      throw new Error("budget_base singleton row is missing; run the seed script before loading the budget");
+      return null;
     }
     return this.budgetBaseMapper.toDomain(row);
   }

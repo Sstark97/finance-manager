@@ -7,7 +7,7 @@ import type { SavePortfolioUseCase } from "@/features/wealth/application/SavePor
 import type { LoadDebtsUseCase } from "@/shared/application/LoadDebts";
 import type { SaveDebtsUseCase } from "@/shared/application/SaveDebts";
 import type { LoadBudgetUseCase } from "@/features/budget/application/LoadBudget";
-import type { SaveBudgetUseCase } from "@/features/budget/application/SaveBudget";
+import type { SaveBudgetUseCase, BudgetSnapshotToSave } from "@/features/budget/application/SaveBudget";
 import type { LoadGoalsSettingsUseCase } from "@/features/goals/application/LoadGoalsSettings";
 import type { SaveGoalsSettingsUseCase } from "@/features/goals/application/SaveGoalsSettings";
 
@@ -15,7 +15,7 @@ export interface InitialAppState {
   portfolio: Position[];
   debts: Debt[];
   budget: BudgetSnapshot;
-  goalsSettings: GoalsSettings;
+  goalsSettings: GoalsSettings | null;
 }
 
 export interface LoadInitialAppStateDependencies {
@@ -29,7 +29,7 @@ export interface LoadInitialAppStateDependencies {
   saveGoalsSettings: SaveGoalsSettingsUseCase;
   seedPortfolio: Position[];
   seedDebts: Debt[];
-  seedBudget: BudgetSnapshot;
+  seedBudget: BudgetSnapshotToSave;
   seedGoalsSettings: GoalsSettings;
 }
 
@@ -53,12 +53,8 @@ export class LoadInitialAppState {
   }
 
   private async checkHasBeenSeeded(): Promise<boolean> {
-    try {
-      await this.dependencies.loadGoalsSettings.invoke();
-      return true;
-    } catch {
-      return false;
-    }
+    const goalsSettings = await this.dependencies.loadGoalsSettings.invoke();
+    return goalsSettings !== null;
   }
 
   private async seed(): Promise<void> {

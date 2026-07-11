@@ -1,8 +1,8 @@
 "use server";
 
-import { getSavePortfolio } from "@/lib/di/container";
+import { container } from "@/lib/di/ContainerDI";
 import type { Position } from "@/features/wealth/domain/types";
 
 export async function savePortfolio(positions: Position[]): Promise<void> {
-  await getSavePortfolio().invoke(positions);
+  await container.savePortfolio().invoke(positions);
 }

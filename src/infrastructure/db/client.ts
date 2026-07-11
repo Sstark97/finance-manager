@@ -23,6 +23,10 @@ export class TursoClientFactory {
     return createClient({ url, authToken, timeout: LOCAL_DATABASE_BUSY_TIMEOUT_MS });
   }
 
+  static toDatabase(client: Client): Database {
+    return drizzle(client, { schema });
+  }
+
   private localDevFallbackUrl(): string {
     if (process.env.NODE_ENV === "production") {
       throw new Error("TURSO_DATABASE_URL environment variable is not set");
@@ -33,8 +37,4 @@ export class TursoClientFactory {
     );
     return LOCAL_DEV_DATABASE_URL;
   }
-}
-
-export function toDatabase(client: Client): Database {
-  return drizzle(client, { schema });
 }

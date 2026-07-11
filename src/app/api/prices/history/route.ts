@@ -1,4 +1,4 @@
-import { getComputePortfolioHistory } from "@/lib/di/container";
+import { container } from "@/lib/di/ContainerDI";
 import type { Position } from "@/features/wealth/domain/types";
 import type { HistoryRange } from "@/features/wealth/domain/HistoryRange";
 
@@ -23,7 +23,7 @@ export async function POST(request: Request): Promise<Response> {
       return Response.json({ error: "Rango temporal no válido" }, { status: 400 });
     }
 
-    const computePortfolioHistory = getComputePortfolioHistory();
+    const computePortfolioHistory = container.computePortfolioHistory();
     const result = await computePortfolioHistory.invoke(body.positions, body.range);
     return Response.json(result);
   } catch {

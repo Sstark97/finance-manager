@@ -11,10 +11,10 @@ export class TursoGoalsSettingsRepository implements GoalsSettingsRepository {
     private readonly mapper: GoalsSettingsRowMapper = new GoalsSettingsRowMapper(),
   ) {}
 
-  async find(): Promise<GoalsSettings> {
+  async find(): Promise<GoalsSettings | null> {
     const [row] = await this.database.select().from(goalsSettingsTable).where(eq(goalsSettingsTable.id, GOALS_SETTINGS_SINGLETON_ID));
     if (!row) {
-      throw new Error("goals_settings singleton row is missing; run the seed script before loading goals settings");
+      return null;
     }
     return this.mapper.toDomain(row);
   }

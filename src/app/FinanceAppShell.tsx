@@ -6,7 +6,7 @@ import type { Debt } from "@/shared/domain/types";
 import type { Position } from "@/features/wealth/domain/types";
 import { portfolioCalculator } from "@/features/wealth/domain/PortfolioCalculator";
 import type { Month, Budget, FixedExpenseItem } from "@/features/budget/domain/types";
-import type { BtcConditions } from "@/features/goals/domain/types";
+import type { GoalsSettings } from "@/features/goals/application/GoalsSettings";
 import { AppStyles } from "@/app/AppStyles";
 import { WealthTab } from "@/features/wealth/components/WealthTab";
 import { BudgetTab } from "@/features/budget/components/BudgetTab";
@@ -23,33 +23,23 @@ type TabId = "wealth" | "budget" | "goals";
 export interface FinanceAppShellProps {
   initialPortfolio: Position[];
   initialDebts: Debt[];
-  initialBaseBudget: Budget;
+  initialBaseBudget: Budget | null;
   initialFixedExpenseItems: FixedExpenseItem[];
   initialMonths: Month[];
-  initialCurrentSalary: number;
-  initialFiContribution: number;
-  initialFiReturn: number;
-  initialBtcSavings: number;
-  initialBtcConditions: BtcConditions;
-  initialCountCar: boolean;
+  initialGoalsSettings: GoalsSettings | null;
 }
 
 export function FinanceAppShell({
   initialPortfolio, initialDebts, initialBaseBudget, initialFixedExpenseItems, initialMonths,
-  initialCurrentSalary, initialFiContribution, initialFiReturn, initialBtcSavings, initialBtcConditions, initialCountCar,
+  initialGoalsSettings,
 }: FinanceAppShellProps): React.JSX.Element {
   const [tab, setTab] = useState<TabId>("wealth");
   const [portfolio, setPortfolio] = useState<Position[]>(initialPortfolio);
   const [debts, setDebts] = useState<Debt[]>(initialDebts);
-  const [baseBudget, setBaseBudget] = useState<Budget>(initialBaseBudget);
+  const [baseBudget, setBaseBudget] = useState<Budget | null>(initialBaseBudget);
   const [months, setMonths] = useState<Month[]>(initialMonths);
   const [fixedExpenseItems, setFixedExpenseItems] = useState<FixedExpenseItem[]>(initialFixedExpenseItems);
-  const [currentSalary, setCurrentSalary] = useState<number>(initialCurrentSalary);
-  const [fiContribution, setFiContribution] = useState<number>(initialFiContribution);
-  const [fiReturn, setFiReturn] = useState<number>(initialFiReturn);
-  const [btcSavings, setBtcSavings] = useState<number>(initialBtcSavings);
-  const [btcConditions, setBtcConditions] = useState<BtcConditions>(initialBtcConditions);
-  const [countCar, setCountCar] = useState<boolean>(initialCountCar);
+  const [goalsSettings, setGoalsSettings] = useState<GoalsSettings | null>(initialGoalsSettings);
 
   const portfolioDerived = useMemo(() => portfolioCalculator.derive(portfolio), [portfolio]);
 
@@ -94,6 +84,7 @@ export function FinanceAppShell({
   const isFirstBudgetRun = useRef(true);
   useEffect(() => {
     if (isFirstBudgetRun.current) { isFirstBudgetRun.current = false; return; }
+    if (baseBudget == null) return;
     const persistBudget = (): void => {
       pendingBudgetFlush.current = null;
       saveBudget({ baseBudget, fixedExpenseItems, months }).catch((error: unknown) => console.error("Failed to persist budget", error));
@@ -106,15 +97,15 @@ export function FinanceAppShell({
   const isFirstGoalsSettingsRun = useRef(true);
   useEffect(() => {
     if (isFirstGoalsSettingsRun.current) { isFirstGoalsSettingsRun.current = false; return; }
+    if (goalsSettings == null) return;
     const persistGoalsSettings = (): void => {
       pendingGoalsSettingsFlush.current = null;
-      saveGoalsSettings({ currentSalary, fiContribution, fiReturn, btcSavings, btcConditions, countCar })
-        .catch((error: unknown) => console.error("Failed to persist goals settings", error));
+      saveGoalsSettings(goalsSettings).catch((error: unknown) => console.error("Failed to persist goals settings", error));
     };
     pendingGoalsSettingsFlush.current = persistGoalsSettings;
     const timeoutId = setTimeout(persistGoalsSettings, PERSIST_DEBOUNCE_MS);
     return () => clearTimeout(timeoutId);
-  }, [currentSalary, fiContribution, fiReturn, btcSavings, btcConditions, countCar]);
+  }, [goalsSettings]);
 
   const TABS: Array<{ id: TabId; label: string }> = [
     { id: "wealth",  label: "Patrimonio" },
@@ -149,12 +140,7 @@ export function FinanceAppShell({
       {tab === "goals" && (
         <GoalsTab
           portfolioDerived={portfolioDerived} debts={debts} setDebts={setDebts}
-          currentSalary={currentSalary} setCurrentSalary={setCurrentSalary}
-          fiContribution={fiContribution} setFiContribution={setFiContribution}
-          fiReturn={fiReturn} setFiReturn={setFiReturn}
-          btcSavings={btcSavings} setBtcSavings={setBtcSavings}
-          btcConditions={btcConditions} setBtcConditions={setBtcConditions}
-          countCar={countCar} setCountCar={setCountCar}
+          settings={goalsSettings} setSettings={setGoalsSettings}
         />
       )}
 

@@ -6,7 +6,8 @@ import {
   PieChart, Pie, Cell, BarChart, Bar
 } from "recharts";
 import { palette, seriesColorAt } from "@/lib/theme";
-import { formatEuro, formatEuroWithCents, formatPercent, generateId } from "@/lib/format";
+import { currencyFormatter } from "@/lib/CurrencyFormatter";
+import { idGenerator } from "@/lib/IdGenerator";
 import type { Position, PortfolioHistoryPoint, PositionType, CompositionItem } from "@/features/wealth/domain/types";
 import { TARGETS, COMPOSITIONS } from "@/features/wealth/domain/config";
 import type { PortfolioDerived } from "@/features/wealth/domain/PortfolioCalculator";
@@ -71,7 +72,7 @@ export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts }: 
     if (appleWatchDaysLeft != null && appleWatchDaysLeft >= 0)
       list.push({ kind: appleWatchDaysLeft <= 3 ? "bad" : "warn", message: `Liquidar Apple Watch: quedan ${appleWatchDaysLeft} día${appleWatchDaysLeft===1?"":"s"} (antes del 10 de julio).` });
     if (liquidityTotal < TARGETS.minimumFund)
-      list.push({ kind:"warn", message:`Fondo de emergencia por debajo del mínimo de ${formatEuro(TARGETS.minimumFund)}. Es la prioridad.` });
+      list.push({ kind:"warn", message:`Fondo de emergencia por debajo del mínimo de ${currencyFormatter.euro(TARGETS.minimumFund)}. Es la prioridad.` });
     if (btcWeightTotal > TARGETS.btcSell && total > TARGETS.btcSellThreshold)
       list.push({ kind:"bad", message:`BTC supera el 50% con cartera >20k: toca venta parcial hasta el 30%.` });
     else if (btcWeightTotal > TARGETS.btcPause && total > TARGETS.btcPauseThreshold)
@@ -79,7 +80,7 @@ export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts }: 
     const worldWeightDeviation = Math.abs(equityWeightOf("world") - TARGETS.equityTargets.world);
     if (equity && worldWeightDeviation > 8) list.push({ kind:"warn", message:`World desviado ${worldWeightDeviation.toFixed(0)} pts del objetivo 60%. El DCA lo corrige.` });
     if (liquidityTotal >= TARGETS.emergencyFund)
-      list.push({ kind:"good", message:`Fondo de emergencia completo (${formatEuro(TARGETS.emergencyFund)}). Replantea virar a inversión.` });
+      list.push({ kind:"good", message:`Fondo de emergencia completo (${currencyFormatter.euro(TARGETS.emergencyFund)}). Replantea virar a inversión.` });
     if (list.length === 0) list.push({ kind:"good", message:"Todo dentro de plan. Sigue con el DCA." });
     return list;
   })();
@@ -113,7 +114,7 @@ export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts }: 
     : position));
   const removePosition = (id: string): void => setPortfolio(positions => positions.filter(position => position.id !== id));
   const addPosition = (type: PositionType): void => setPortfolio(positions => [...positions, {
-    id: generateId(), name: type === "efectivo" ? "Nuevo efectivo" : "Nueva posición",
+    id: idGenerator.generate(), name: type === "efectivo" ? "Nuevo efectivo" : "Nueva posición",
     ticker: "", type, units: 0, price: type === "efectivo" ? 1 : 0,
     group: type === "cripto" ? "btc" : type === "efectivo" ? "liquidez" : "rv",
   }]);
@@ -187,22 +188,32 @@ export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts }: 
         <div style={{ marginBottom:16, fontSize:12.5, color:palette.warn }}>{priceRefreshWarning}</div>
       )}
 
+      {portfolio.length === 0 && (
+        <div className="card" style={{ marginBottom:16 }}>
+          <div className="eyebrow" style={{ marginBottom:6 }}>Aún no tienes posiciones</div>
+          <p style={{ margin:0, fontSize:12.5, color:palette.sub, lineHeight:1.5 }}>
+            Añade tu primera posición (fondo, ETF, cripto o efectivo) para empezar a ver aquí tu patrimonio,
+            su distribución y su evolución. Pulsa <strong style={{color:palette.ink}}>&quot;Editar cartera&quot;</strong> arriba.
+          </p>
+        </div>
+      )}
+
       <div className="card" style={{ marginBottom:16, display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:20 }}>
         <div>
-          <div className="num disp" style={{ fontSize:"clamp(40px,9vw,68px)", fontWeight:600, lineHeight:1 }}>{formatEuroWithCents(total)}</div>
+          <div className="num disp" style={{ fontSize:"clamp(40px,9vw,68px)", fontWeight:600, lineHeight:1 }}>{currencyFormatter.euroWithCents(total)}</div>
           <div style={{ marginTop:10, fontSize:15 }} className="num">
-            <span style={{ color: change>=0 ? palette.acc : palette.bad }}>{change>=0?"▲":"▼"} {formatEuroWithCents(Math.abs(change))} ({changePercent>=0?"+":""}{changePercent.toFixed(2)}%)</span>
+            <span style={{ color: change>=0 ? palette.acc : palette.bad }}>{change>=0?"▲":"▼"} {currencyFormatter.euroWithCents(Math.abs(change))} ({changePercent>=0?"+":""}{changePercent.toFixed(2)}%)</span>
             <span style={{ color:palette.faint }}> en el rango seleccionado</span>
           </div>
           <div style={{ marginTop:6, fontSize:12.5 }} className="num">
             <span style={{ color:palette.sub }}>Patrimonio neto (activos − deudas): </span>
-            <span style={{ color: netWorth>=0?palette.acc:palette.bad, fontWeight:600 }}>{formatEuroWithCents(netWorth)}</span>
+            <span style={{ color: netWorth>=0?palette.acc:palette.bad, fontWeight:600 }}>{currencyFormatter.euroWithCents(netWorth)}</span>
           </div>
         </div>
         <div style={{ display:"flex", gap:28, flexWrap:"wrap" }}>
-          <Metric label="Invertido" value={formatEuro(invested)} sub={`${formatPercent(total?invested/total*100:0)} del total`} />
-          <Metric label="Liquidez" value={formatEuro(liquidityTotal)} sub={`${formatPercent(total?liquidityTotal/total*100:0)} del total`} />
-          <Metric label="Bitcoin" value={formatEuro(btcTotal)} sub={`${formatPercent(btcWeightTotal)} del total`} />
+          <Metric label="Invertido" value={currencyFormatter.euro(invested)} sub={`${currencyFormatter.percent(total?invested/total*100:0)} del total`} />
+          <Metric label="Liquidez" value={currencyFormatter.euro(liquidityTotal)} sub={`${currencyFormatter.percent(total?liquidityTotal/total*100:0)} del total`} />
+          <Metric label="Bitcoin" value={currencyFormatter.euro(btcTotal)} sub={`${currencyFormatter.percent(btcWeightTotal)} del total`} />
         </div>
       </div>
 
@@ -252,7 +263,7 @@ export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts }: 
                       <span style={{ fontSize:11, color:palette.faint }}>Precio (Yahoo / manual)</span>
                       <input className="inp" type="number" step="any" value={position.price} onChange={(event: React.ChangeEvent<HTMLInputElement>) => editPosition(position.id,"price",event.target.value)} style={{ width:120 }} />
                     </label>
-                    <span className="num" style={{ fontSize:15, fontWeight:600, color:palette.acc }}>= {formatEuroWithCents((position.units||0)*(position.price||0))}</span>
+                    <span className="num" style={{ fontSize:15, fontWeight:600, color:palette.acc }}>= {currencyFormatter.euroWithCents((position.units||0)*(position.price||0))}</span>
                   </div>
                 )}
               </div>
@@ -287,22 +298,30 @@ export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts }: 
 
         <div className="card">
           <div className="eyebrow" style={{ marginBottom:8 }}>Distribución del patrimonio</div>
-          <ResponsiveContainer width="100%" height={200}>
-            <PieChart>
-              <Pie data={portfolioPie} dataKey="value" nameKey="name" innerRadius={52} outerRadius={82} paddingAngle={2} stroke="none">
-                {portfolioPie.map((slice,sliceIndex) => <Cell key={sliceIndex} fill={slice.color} />)}
-              </Pie>
-              <Tooltip formatter={(value) => formatEuroWithCents(Number(value))} itemStyle={{color:palette.ink}} labelStyle={{color:palette.sub}} contentStyle={{background:palette.panel2,border:`1px solid ${palette.line}`,borderRadius:8,color:palette.ink}} />
-            </PieChart>
-          </ResponsiveContainer>
-          <div style={{ display:"flex", flexWrap:"wrap", gap:"6px 14px", marginTop:8 }}>
-            {portfolioPie.map((slice) => (
-              <span key={slice.name} style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, color:palette.sub }}>
-                <span style={{ width:9, height:9, borderRadius:2, background:slice.color }} />
-                {slice.name} <span className="num" style={{ color:palette.ink }}>{formatPercent(total?slice.value/total*100:0)}</span>
-              </span>
-            ))}
-          </div>
+          {portfolioPie.length === 0 ? (
+            <div style={{ height:200, display:"flex", alignItems:"center", justifyContent:"center", textAlign:"center", padding:"0 16px", color:palette.faint, fontSize:12.5, lineHeight:1.5 }}>
+              Sin posiciones todavía. La distribución aparecerá aquí en cuanto añadas tu primera posición.
+            </div>
+          ) : (
+            <>
+              <ResponsiveContainer width="100%" height={200}>
+                <PieChart>
+                  <Pie data={portfolioPie} dataKey="value" nameKey="name" innerRadius={52} outerRadius={82} paddingAngle={2} stroke="none">
+                    {portfolioPie.map((slice,sliceIndex) => <Cell key={sliceIndex} fill={slice.color} />)}
+                  </Pie>
+                  <Tooltip formatter={(value) => currencyFormatter.euroWithCents(Number(value))} itemStyle={{color:palette.ink}} labelStyle={{color:palette.sub}} contentStyle={{background:palette.panel2,border:`1px solid ${palette.line}`,borderRadius:8,color:palette.ink}} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:"6px 14px", marginTop:8 }}>
+                {portfolioPie.map((slice) => (
+                  <span key={slice.name} style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, color:palette.sub }}>
+                    <span style={{ width:9, height:9, borderRadius:2, background:slice.color }} />
+                    {slice.name} <span className="num" style={{ color:palette.ink }}>{currencyFormatter.percent(total?slice.value/total*100:0)}</span>
+                  </span>
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
         <div className="card">
@@ -315,7 +334,7 @@ export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts }: 
           ))}
           <div style={{ marginTop:16, paddingTop:16, borderTop:`1px solid ${palette.line}` }}>
             <div style={{ display:"flex", justifyContent:"space-between", fontSize:12.5, color:palette.sub, marginBottom:6 }}>
-              <span>Reglas BTC (por peso)</span><span className="num">{formatPercent(btcWeightTotal)} actual</span>
+              <span>Reglas BTC (por peso)</span><span className="num">{currencyFormatter.percent(btcWeightTotal)} actual</span>
             </div>
             <div style={{ fontSize:11.5, color:palette.faint, lineHeight:1.6 }}>Pausar si &gt;40% y cartera &gt;10k · Vender si &gt;50% y cartera &gt;20k</div>
           </div>
@@ -330,7 +349,7 @@ export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts }: 
               <div key={key} style={{ marginBottom:16, opacity: exists?1:.4 }}>
                 <div style={{ display:"flex", justifyContent:"space-between", fontSize:13, marginBottom:5 }}>
                   <span style={{ color:palette.ink }}>{label}</span>
-                  <span className="num"><span style={{color:palette.ink}}>{formatPercent(weight)}</span> <span style={{color:palette.faint}}>/ {target}%</span></span>
+                  <span className="num"><span style={{color:palette.ink}}>{currencyFormatter.percent(weight)}</span> <span style={{color:palette.faint}}>/ {target}%</span></span>
                 </div>
                 <div style={{ position:"relative", height:7, background:palette.panel2, borderRadius:4 }}>
                   <div style={{ position:"absolute", left:`${target}%`, top:-2, bottom:-2, width:2, background:palette.faint, opacity:.7 }} />
@@ -366,13 +385,13 @@ export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts }: 
                 <XAxis dataKey="label" hide />
                 <YAxis domain={["dataMin","dataMax"]} hide />
                 <ReferenceLine y={firstHistoryTotal} stroke={palette.faint} strokeDasharray="3 4" />
-                <Tooltip formatter={(value)=>formatEuroWithCents(Number(value))} cursor={{ stroke: palette.faint, strokeWidth: 1 }} itemStyle={{color:palette.ink}} contentStyle={{background:palette.panel2,border:`1px solid ${palette.line}`,borderRadius:8}} labelStyle={{color:palette.sub}} />
+                <Tooltip formatter={(value)=>currencyFormatter.euroWithCents(Number(value))} cursor={{ stroke: palette.faint, strokeWidth: 1 }} itemStyle={{color:palette.ink}} contentStyle={{background:palette.panel2,border:`1px solid ${palette.line}`,borderRadius:8}} labelStyle={{color:palette.sub}} />
                 <Line type="monotone" dataKey="total" stroke={change>=0?palette.acc:palette.bad} strokeWidth={2} dot={false} activeDot={{ r:4 }} isAnimationActive animationDuration={500} animationEasing="ease-out" />
               </LineChart>
             </ResponsiveContainer>
           )}
           <div className="num" style={{ marginTop:10, fontSize:13.5, textAlign:"center" }}>
-            <span style={{ color: change>=0 ? palette.acc : palette.bad }}>{change>=0?"▲":"▼"} {formatEuroWithCents(Math.abs(change))} ({changePercent>=0?"+":""}{changePercent.toFixed(2)}%)</span>
+            <span style={{ color: change>=0 ? palette.acc : palette.bad }}>{change>=0?"▲":"▼"} {currencyFormatter.euroWithCents(Math.abs(change))} ({changePercent>=0?"+":""}{changePercent.toFixed(2)}%)</span>
             <span style={{ color:palette.faint }}> en el rango seleccionado</span>
           </div>
         </div>
@@ -380,8 +399,8 @@ export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts }: 
         <div className={compositionKeys.length > 0 ? "card" : "card span-full"}>
           <div className="eyebrow" style={{ marginBottom:14 }}>Fondo de emergencia / casa</div>
           <div style={{ display:"flex", alignItems:"baseline", gap:8, marginBottom:4 }}>
-            <span className="num disp" style={{ fontSize:34, fontWeight:600 }}>{formatEuro(liquidityTotal)}</span>
-            <span className="num" style={{ color:palette.faint }}>/ {formatEuro(TARGETS.emergencyFund)}</span>
+            <span className="num disp" style={{ fontSize:34, fontWeight:600 }}>{currencyFormatter.euro(liquidityTotal)}</span>
+            <span className="num" style={{ color:palette.faint }}>/ {currencyFormatter.euro(TARGETS.emergencyFund)}</span>
           </div>
           <div style={{ height:10, background:palette.panel2, borderRadius:6, overflow:"hidden", margin:"14px 0 10px", position:"relative" }}>
             <div style={{ position:"absolute", left:`${TARGETS.minimumFund/TARGETS.emergencyFund*100}%`, top:0, bottom:0, width:2, background:palette.ink, opacity:.5, zIndex:2 }} />
@@ -389,8 +408,8 @@ export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts }: 
           </div>
           <div style={{ fontSize:12, color:palette.sub }}>
             {liquidityTotal < TARGETS.minimumFund
-              ? `Faltan ${formatEuro(TARGETS.minimumFund-liquidityTotal)} para el mínimo intocable.`
-              : `${formatPercent(liquidityTotal/TARGETS.emergencyFund*100)} del objetivo. Cubre ~${(liquidityTotal/778.89).toFixed(1)} meses de gastos.`}
+              ? `Faltan ${currencyFormatter.euro(TARGETS.minimumFund-liquidityTotal)} para el mínimo intocable.`
+              : `${currencyFormatter.percent(liquidityTotal/TARGETS.emergencyFund*100)} del objetivo. Cubre ~${(liquidityTotal/778.89).toFixed(1)} meses de gastos.`}
           </div>
         </div>
 

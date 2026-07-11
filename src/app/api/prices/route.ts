@@ -1,4 +1,4 @@
-import { getRefreshPositionPrices } from "@/lib/di/container";
+import { container } from "@/lib/di/ContainerDI";
 import type { Position } from "@/features/wealth/domain/types";
 
 interface RefreshPricesRequestBody {
@@ -11,7 +11,7 @@ export async function POST(request: Request): Promise<Response> {
     if (!Array.isArray(body?.positions)) {
       return Response.json({ error: "Se esperaba un array de posiciones" }, { status: 400 });
     }
-    const refreshPositionPrices = getRefreshPositionPrices();
+    const refreshPositionPrices = container.refreshPositionPrices();
     const result = await refreshPositionPrices.invoke(body.positions);
     return Response.json(result);
   } catch {
