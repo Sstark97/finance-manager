@@ -1,0 +1,32 @@
+import type { Position, PositionType, PositionGroup } from "@/features/wealth/domain/types";
+import type { positions } from "@/infrastructure/db/schema";
+
+type PositionRow = typeof positions.$inferSelect;
+type NewPositionRow = typeof positions.$inferInsert;
+
+export class PositionRowMapper {
+  toDomain(row: PositionRow): Position {
+    return {
+      id: row.id,
+      name: row.name,
+      ticker: row.ticker,
+      type: row.type as PositionType,
+      units: row.units,
+      price: row.lastPrice ?? 0,
+      group: row.groupName as PositionGroup,
+    };
+  }
+
+  toRow(position: Position, updatedAt: number): NewPositionRow {
+    return {
+      id: position.id,
+      name: position.name,
+      ticker: position.ticker,
+      type: position.type,
+      units: position.units,
+      groupName: position.group,
+      lastPrice: position.price,
+      updatedAt,
+    };
+  }
+}
