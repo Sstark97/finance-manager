@@ -3,7 +3,6 @@
 import React from "react";
 import { palette } from "@/lib/theme";
 import { currencyFormatter } from "@/lib/CurrencyFormatter";
-import { idGenerator } from "@/lib/IdGenerator";
 import type { Phase, BtcConditions } from "@/features/goals/domain/types";
 import { FI_GOAL, HOUSING_GOAL, BTC_OP_GOAL, PHASES } from "@/features/goals/domain/config";
 import type { PortfolioDerived } from "@/features/wealth/domain/PortfolioCalculator";
@@ -12,8 +11,8 @@ import { WEALTH_TARGETS_INITIAL } from "@/features/wealth/data/wealthTargets";
 import { financialProjectionCalculator } from "@/features/goals/domain/FinancialProjectionCalculator";
 import type { Debt } from "@/shared/domain/types";
 import type { GoalsSettings } from "@/features/goals/application/GoalsSettings";
-import { Metric } from "@/shared/ui/Metric";
 import { GoalsSettingsOnboarding } from "@/features/goals/components/GoalsSettingsOnboarding";
+import { DebtsSection } from "@/features/goals/components/DebtsSection";
 
 export interface GoalsTabProps {
   portfolioDerived: PortfolioDerived;
@@ -23,9 +22,6 @@ export interface GoalsTabProps {
   setSettings: React.Dispatch<React.SetStateAction<GoalsSettings | null>>;
   wealthTargets: WealthTargets | null;
 }
-
-type EditableDebtTextField = "name" | "note";
-type EditableDebtNumberField = "installment" | "balance";
 
 export function GoalsTab({ portfolioDerived, debts, setDebts, settings, setSettings, wealthTargets }: GoalsTabProps): React.JSX.Element {
   if (settings == null) {
@@ -42,15 +38,6 @@ export function GoalsTab({ portfolioDerived, debts, setDebts, settings, setSetti
   const updateBtcConditions = (updater: (conditions: BtcConditions) => BtcConditions): void => setSettings(previous => (previous ? { ...previous, btcConditions: updater(previous.btcConditions) } : previous));
 
   const { total, invested, liquidityTotal } = portfolioDerived;
-
-  const totalDebt = debts.reduce((sum,debt)=>sum+(debt.balance||0),0);
-  const netWorth = total - totalDebt;
-
-  const editDebtText = (id: string, field: EditableDebtTextField, value: string): void => setDebts(debtList => debtList.map(debt => debt.id===id ? { ...debt, [field]: value } : debt));
-  const editDebtNumber = (id: string, field: EditableDebtNumberField, value: string): void => setDebts(debtList => debtList.map(debt => debt.id===id ? { ...debt, [field]: parseFloat(value)||0 } : debt));
-  const markSettled = (id: string): void => setDebts(debtList => debtList.map(debt => debt.id===id ? { ...debt, balance: 0 } : debt));
-  const removeDebt = (id: string): void => setDebts(debtList => debtList.filter(debt => debt.id !== id));
-  const addDebt = (): void => setDebts(debtList => [...debtList, { id: idGenerator.generate(), name: "Nueva deuda", installment: 0, balance: 0, note: "" }]);
 
   const projection = financialProjectionCalculator.project({
     initial: total, contribution: fiContribution, annualReturn: fiReturn, target: FI_GOAL.capital,
@@ -127,44 +114,7 @@ export function GoalsTab({ portfolioDerived, debts, setDebts, settings, setSetti
         </div>
       </div>
 
-      <div className="card span-2">
-        <div className="eyebrow" style={{ marginBottom:14 }}>Deudas y patrimonio neto</div>
-        {debts.length === 0 ? (
-          <div style={{ fontSize:12.5, color:palette.faint, marginBottom:14 }}>Aún no has añadido deudas.</div>
-        ) : (
-          debts.map(debt => (
-            <div key={debt.id} className="deuda-row" style={{ marginBottom:12, paddingBottom:12, borderBottom:`1px solid ${palette.line}` }}>
-              <div>
-                <label>
-                  <div style={{ fontSize:10.5, color:palette.faint, marginBottom:2 }}>Nombre</div>
-                  <input className="inp" value={debt.name} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>editDebtText(debt.id,"name",event.target.value)} style={{fontFamily:"'DM Sans',sans-serif"}} />
-                </label>
-                <label style={{ display:"block", marginTop:6 }}>
-                  <div style={{ fontSize:10.5, color:palette.faint, marginBottom:2 }}>Nota</div>
-                  <input className="inp" value={debt.note} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>editDebtText(debt.id,"note",event.target.value)} style={{fontFamily:"'DM Sans',sans-serif"}} />
-                </label>
-              </div>
-              <label>
-                <div style={{ fontSize:10.5, color:palette.faint, marginBottom:2 }}>Cuota/mes</div>
-                <input className="inp" type="number" step="any" value={debt.installment} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>editDebtNumber(debt.id,"installment",event.target.value)} />
-              </label>
-              <label>
-                <div style={{ fontSize:10.5, color:palette.faint, marginBottom:2 }}>Saldo pendiente</div>
-                <input className="inp" type="number" step="any" value={debt.balance} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>editDebtNumber(debt.id,"balance",event.target.value)} />
-              </label>
-              <div style={{ display:"flex", gap:6 }}>
-                <button className="seg" onClick={()=>markSettled(debt.id)} title="Marcar como liquidada">Liquidar</button>
-                <button className="seg" onClick={()=>removeDebt(debt.id)} title="Eliminar deuda" style={{ color:palette.bad }}>Eliminar</button>
-              </div>
-            </div>
-          ))
-        )}
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:12, marginTop:14 }}>
-          <Metric label="Deuda total" value={currencyFormatter.euro(totalDebt)} sub="suma de saldos pendientes" />
-          <Metric label="Patrimonio neto" value={currencyFormatter.euro(netWorth)} sub="activos − deudas" />
-          <button className="seg on" onClick={addDebt}>+ Añadir deuda</button>
-        </div>
-      </div>
+      <DebtsSection debts={debts} setDebts={setDebts} portfolioTotal={total} />
 
       <div className="card span-full">
         <div className="eyebrow" style={{ marginBottom:16 }}>Fases del plan (desbloqueadas por salario)</div>

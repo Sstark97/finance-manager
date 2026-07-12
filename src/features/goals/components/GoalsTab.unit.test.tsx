@@ -68,49 +68,13 @@ describe("GoalsTab", () => {
     expect(screen.getByText("Libertad financiera")).toBeInTheDocument();
   });
 
-  it("should show an empty-state message and an add-debt call to action when there are no debts", () => {
-    renderGoalsTab({ settings: SAMPLE_SETTINGS, debts: [] });
-
-    expect(screen.getByText("Aún no has añadido deudas.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "+ Añadir deuda" })).toBeInTheDocument();
-  });
-
-  it("should add a blank debt when the add-debt call to action is pressed", () => {
-    const { setDebts } = renderGoalsTab({ settings: SAMPLE_SETTINGS, debts: [] });
-
-    fireEvent.click(screen.getByRole("button", { name: "+ Añadir deuda" }));
-
-    const updater = setDebts.mock.calls[0][0] as (debts: Debt[]) => Debt[];
-    expect(updater([])).toHaveLength(1);
-  });
-
-  it("should list existing debts instead of the empty-state message when debts are present", () => {
+  it("should render the collapsed debts section without exposing debt inputs directly", () => {
     const debt: Debt = { id: "coche", name: "Coche", installment: 173.28, balance: 8000, note: "En curso" };
 
     renderGoalsTab({ settings: SAMPLE_SETTINGS, debts: [debt] });
 
-    expect(screen.queryByText("Aún no has añadido deudas.")).not.toBeInTheDocument();
-    expect(screen.getByDisplayValue("Coche")).toBeInTheDocument();
-  });
-
-  it("should call setDebts with the new name when the debt name input is edited", () => {
-    const debt: Debt = { id: "coche", name: "Coche", installment: 173.28, balance: 8000, note: "En curso" };
-    const { setDebts } = renderGoalsTab({ settings: SAMPLE_SETTINGS, debts: [debt] });
-
-    fireEvent.change(screen.getByRole("textbox", { name: "Nombre" }), { target: { value: "Préstamo coche" } });
-
-    const updater = setDebts.mock.calls[0][0] as (debts: Debt[]) => Debt[];
-    expect(updater([debt])[0].name).toBe("Préstamo coche");
-  });
-
-  it("should filter out the debt when the Eliminar button is pressed", () => {
-    const debt: Debt = { id: "coche", name: "Coche", installment: 173.28, balance: 8000, note: "En curso" };
-    const { setDebts } = renderGoalsTab({ settings: SAMPLE_SETTINGS, debts: [debt] });
-
-    fireEvent.click(screen.getByRole("button", { name: "Eliminar" }));
-
-    const updater = setDebts.mock.calls[0][0] as (debts: Debt[]) => Debt[];
-    expect(updater([debt])).toEqual([]);
+    expect(screen.getByText("Deudas y patrimonio neto")).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("Coche")).not.toBeInTheDocument();
   });
 
   it("should not show a checkbox to count the car as an asset, since that concept no longer exists", () => {

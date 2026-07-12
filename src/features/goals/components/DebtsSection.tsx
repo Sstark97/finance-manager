@@ -1,0 +1,163 @@
+"use client";
+
+import React, { useState } from "react";
+import { palette } from "@/lib/theme";
+import { currencyFormatter } from "@/lib/CurrencyFormatter";
+import { idGenerator } from "@/lib/IdGenerator";
+import type { Debt } from "@/shared/domain/types";
+import { Metric } from "@/shared/ui/Metric";
+
+export interface DebtsSectionProps {
+  debts: Debt[];
+  setDebts: React.Dispatch<React.SetStateAction<Debt[]>>;
+  portfolioTotal: number;
+}
+
+const SAVED_MESSAGE_DURATION_MS = 2000;
+
+export function DebtsSection({ debts, setDebts, portfolioTotal }: DebtsSectionProps): React.JSX.Element {
+  const [sectionOpen, setSectionOpen] = useState<boolean>(false);
+  const [editing, setEditing] = useState<boolean>(false);
+  const [draftDebts, setDraftDebts] = useState<Debt[]>(debts);
+  const [syncedDebtsSnapshot, setSyncedDebtsSnapshot] = useState<string>(JSON.stringify(debts));
+  const [saved, setSaved] = useState<boolean>(false);
+
+  const debtsSnapshot = JSON.stringify(debts);
+  if (!editing && debtsSnapshot !== syncedDebtsSnapshot) {
+    setSyncedDebtsSnapshot(debtsSnapshot);
+    setDraftDebts(debts);
+  }
+
+  const hasUnsavedChanges = JSON.stringify(draftDebts) !== debtsSnapshot;
+
+  const totalDebt = debts.reduce((sum, debt) => sum + debt.balance, 0);
+  const netWorth = portfolioTotal - totalDebt;
+  const draftTotalDebt = draftDebts.reduce((sum, debt) => sum + debt.balance, 0);
+  const draftNetWorth = portfolioTotal - draftTotalDebt;
+  const displayedTotalDebt = editing ? draftTotalDebt : totalDebt;
+  const displayedNetWorth = editing ? draftNetWorth : netWorth;
+
+  const renameDebt = (id: string, value: string): void =>
+    setDraftDebts(list => list.map(debt => (debt.id === id ? { ...debt, name: value } : debt)));
+  const editDebtNote = (id: string, value: string): void =>
+    setDraftDebts(list => list.map(debt => (debt.id === id ? { ...debt, note: value } : debt)));
+  const editDebtInstallment = (id: string, value: string): void =>
+    setDraftDebts(list => list.map(debt => (debt.id === id ? { ...debt, installment: parseFloat(value) || 0 } : debt)));
+  const editDebtBalance = (id: string, value: string): void =>
+    setDraftDebts(list => list.map(debt => (debt.id === id ? { ...debt, balance: parseFloat(value) || 0 } : debt)));
+  const settleDebt = (id: string): void =>
+    setDraftDebts(list => list.map(debt => (debt.id === id ? { ...debt, balance: 0 } : debt)));
+  const removeDebt = (id: string): void =>
+    setDraftDebts(list => list.filter(debt => debt.id !== id));
+  const addDebt = (): void =>
+    setDraftDebts(list => [...list, { id: idGenerator.generate(), name: "Nueva deuda", installment: 0, balance: 0, note: "" }]);
+
+  const saveDraftDebts = (): void => {
+    setDebts(draftDebts);
+    setEditing(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), SAVED_MESSAGE_DURATION_MS);
+  };
+  const discardChanges = (): void => {
+    setDraftDebts(debts);
+    setEditing(false);
+  };
+
+  return (
+    <div className="card span-2">
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+        <button
+          className="eyebrow"
+          onClick={() => setSectionOpen(previous => !previous)}
+          style={{ background: "none", border: "none", padding: 0, display: "flex", alignItems: "center", gap: 8 }}
+        >
+          <span style={{ display: "inline-block", transition: ".15s", transform: sectionOpen ? "rotate(90deg)" : "rotate(0deg)" }}>▸</span>
+          Deudas y patrimonio neto
+        </button>
+        <div className="num" style={{ fontSize: 12.5 }}>
+          <span style={{ color: palette.sub }}>Deuda total: </span>
+          <span style={{ color: totalDebt > 0 ? palette.bad : palette.acc, fontWeight: 600 }}>{currencyFormatter.euro(totalDebt)}</span>
+        </div>
+      </div>
+
+      {sectionOpen && (
+        <div style={{ marginTop: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+            <button className="seg on" onClick={() => setEditing(previous => !previous)}>
+              {editing ? "Cerrar edición" : "Editar deudas"}
+            </button>
+            {saved && <span style={{ fontSize: 12, color: palette.acc }}>Guardado ✓</span>}
+          </div>
+
+          {!editing && (
+            debts.length === 0 ? (
+              <div style={{ fontSize: 12.5, color: palette.faint, marginBottom: 14 }}>Aún no has añadido deudas.</div>
+            ) : (
+              debts.map(debt => (
+                <div key={debt.id} style={{ marginBottom: 12, paddingBottom: 12, borderBottom: `1px solid ${palette.line}` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 8 }}>
+                    <div>
+                      <div style={{ fontSize: 13.5, color: palette.ink }}>{debt.name}</div>
+                      {debt.note && <div style={{ fontSize: 11.5, color: palette.faint, marginTop: 2 }}>{debt.note}</div>}
+                    </div>
+                    <div className="num" style={{ display: "flex", gap: 16, fontSize: 12.5 }}>
+                      <span style={{ color: palette.sub }}>Cuota {currencyFormatter.euro(debt.installment)}/mes</span>
+                      <span style={{ color: palette.ink, fontWeight: 600 }}>{currencyFormatter.euro(debt.balance)}</span>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )
+          )}
+
+          {editing && (
+            <>
+              {draftDebts.length === 0 ? (
+                <div style={{ fontSize: 12.5, color: palette.faint, marginBottom: 14 }}>Aún no has añadido deudas.</div>
+              ) : (
+                draftDebts.map(debt => (
+                  <div key={debt.id} className="deuda-row" style={{ marginBottom: 12, paddingBottom: 12, borderBottom: `1px solid ${palette.line}` }}>
+                    <div>
+                      <label>
+                        <div style={{ fontSize: 10.5, color: palette.faint, marginBottom: 2 }}>Nombre</div>
+                        <input className="inp" value={debt.name} onChange={(event: React.ChangeEvent<HTMLInputElement>) => renameDebt(debt.id, event.target.value)} style={{ fontFamily: "'DM Sans',sans-serif" }} />
+                      </label>
+                      <label style={{ display: "block", marginTop: 6 }}>
+                        <div style={{ fontSize: 10.5, color: palette.faint, marginBottom: 2 }}>Nota</div>
+                        <input className="inp" value={debt.note} onChange={(event: React.ChangeEvent<HTMLInputElement>) => editDebtNote(debt.id, event.target.value)} style={{ fontFamily: "'DM Sans',sans-serif" }} />
+                      </label>
+                    </div>
+                    <label>
+                      <div style={{ fontSize: 10.5, color: palette.faint, marginBottom: 2 }}>Cuota/mes</div>
+                      <input className="inp" type="number" step="any" value={debt.installment} onChange={(event: React.ChangeEvent<HTMLInputElement>) => editDebtInstallment(debt.id, event.target.value)} />
+                    </label>
+                    <label>
+                      <div style={{ fontSize: 10.5, color: palette.faint, marginBottom: 2 }}>Saldo pendiente</div>
+                      <input className="inp" type="number" step="any" value={debt.balance} onChange={(event: React.ChangeEvent<HTMLInputElement>) => editDebtBalance(debt.id, event.target.value)} />
+                    </label>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button className="seg" onClick={() => settleDebt(debt.id)} title="Marcar como liquidada">Liquidar</button>
+                      <button className="seg" onClick={() => removeDebt(debt.id)} title="Eliminar deuda" style={{ color: palette.bad }}>Eliminar</button>
+                    </div>
+                  </div>
+                ))
+              )}
+
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 14, marginBottom: 14 }}>
+                <button className={`seg ${hasUnsavedChanges ? "on" : ""}`} onClick={saveDraftDebts} disabled={!hasUnsavedChanges}>Guardar cambios</button>
+                {hasUnsavedChanges && <button className="seg" onClick={discardChanges}>Descartar</button>}
+                {hasUnsavedChanges && <span style={{ fontSize: 12, color: palette.warn }}>Cambios sin guardar</span>}
+                <button className="seg" onClick={addDebt}>+ Añadir deuda</button>
+              </div>
+            </>
+          )}
+
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginTop: 14 }}>
+            <Metric label="Deuda total" value={currencyFormatter.euro(displayedTotalDebt)} sub="suma de saldos pendientes" />
+            <Metric label="Patrimonio neto" value={currencyFormatter.euro(displayedNetWorth)} sub="activos − deudas" />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
