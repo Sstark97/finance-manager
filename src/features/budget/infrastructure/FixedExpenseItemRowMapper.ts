@@ -13,9 +13,10 @@ export class FixedExpenseItemRowMapper {
     };
   }
 
-  toRow(item: FixedExpenseItem, sortOrder: number): NewFixedExpenseItemRow {
+  toRow(item: FixedExpenseItem, userId: string, sortOrder: number): NewFixedExpenseItemRow {
     return {
       id: item.id,
+      userId,
       name: item.name,
       amount: item.amount,
       sortOrder,

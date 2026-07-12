@@ -6,8 +6,9 @@ import { currencyFormatter } from "@/lib/CurrencyFormatter";
 import { idGenerator } from "@/lib/IdGenerator";
 import type { Phase, BtcConditions } from "@/features/goals/domain/types";
 import { FI_GOAL, HOUSING_GOAL, BTC_OP_GOAL, PHASES } from "@/features/goals/domain/config";
-import { TARGETS } from "@/features/wealth/domain/config";
 import type { PortfolioDerived } from "@/features/wealth/domain/PortfolioCalculator";
+import type { WealthTargets } from "@/features/wealth/domain/WealthTargets";
+import { WEALTH_TARGETS_INITIAL } from "@/features/wealth/data/wealthTargets";
 import { financialProjectionCalculator } from "@/features/goals/domain/FinancialProjectionCalculator";
 import type { Debt } from "@/shared/domain/types";
 import type { GoalsSettings } from "@/features/goals/application/GoalsSettings";
@@ -20,14 +21,17 @@ export interface GoalsTabProps {
   setDebts: React.Dispatch<React.SetStateAction<Debt[]>>;
   settings: GoalsSettings | null;
   setSettings: React.Dispatch<React.SetStateAction<GoalsSettings | null>>;
+  wealthTargets: WealthTargets | null;
 }
 
 type EditableDebtField = "installment" | "balance";
 
-export function GoalsTab({ portfolioDerived, debts, setDebts, settings, setSettings }: GoalsTabProps): React.JSX.Element {
+export function GoalsTab({ portfolioDerived, debts, setDebts, settings, setSettings, wealthTargets }: GoalsTabProps): React.JSX.Element {
   if (settings == null) {
     return <GoalsSettingsOnboarding onCreateSettings={setSettings} />;
   }
+
+  const effectiveWealthTargets = wealthTargets ?? WEALTH_TARGETS_INITIAL;
 
   const { currentSalary, fiContribution, fiReturn, btcSavings, btcConditions, countCar } = settings;
   const setCurrentSalary = (value: number): void => setSettings(previous => (previous ? { ...previous, currentSalary: value } : previous));
@@ -67,7 +71,7 @@ export function GoalsTab({ portfolioDerived, debts, setDebts, settings, setSetti
   })();
   const nextPhase = PHASES.find(phase => phase.id === currentPhase.id + 1);
 
-  const emergencyFundMet = liquidityTotal >= TARGETS.minimumFund;
+  const emergencyFundMet = liquidityTotal >= effectiveWealthTargets.minimumFund;
 
   return (
     <div className="grid" style={{ gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,340px),1fr))" }}>
@@ -131,13 +135,13 @@ export function GoalsTab({ portfolioDerived, debts, setDebts, settings, setSetti
         <div className="eyebrow" style={{ marginBottom:8 }}>Fondo de emergencia</div>
         <div style={{ display:"flex", alignItems:"baseline", gap:8, marginBottom:6 }}>
           <span className="num disp" style={{ fontSize:26, fontWeight:600 }}>{currencyFormatter.euro(liquidityTotal)}</span>
-          <span className="num" style={{ color:palette.faint }}>/ {currencyFormatter.euro(TARGETS.emergencyFund)}</span>
+          <span className="num" style={{ color:palette.faint }}>/ {currencyFormatter.euro(effectiveWealthTargets.emergencyFund)}</span>
         </div>
         <div className="barra" style={{ marginBottom:10 }}>
-          <div className="barra-fill" style={{ width:`${Math.min(100, liquidityTotal/TARGETS.emergencyFund*100)}%`, background: emergencyFundMet ? palette.acc : palette.bad }} />
+          <div className="barra-fill" style={{ width:`${Math.min(100, liquidityTotal/effectiveWealthTargets.emergencyFund*100)}%`, background: emergencyFundMet ? palette.acc : palette.bad }} />
         </div>
         <div style={{ fontSize:12, color:palette.sub }}>
-          {emergencyFundMet ? "Mínimo intocable cubierto." : `Por debajo del mínimo de ${currencyFormatter.euro(TARGETS.minimumFund)}: es la prioridad.`} Objetivo 6 meses de gastos (4.900€).
+          {emergencyFundMet ? "Mínimo intocable cubierto." : `Por debajo del mínimo de ${currencyFormatter.euro(effectiveWealthTargets.minimumFund)}: es la prioridad.`} Objetivo 6 meses de gastos ({currencyFormatter.euro(effectiveWealthTargets.emergencyFund)}).
         </div>
       </div>
 
@@ -218,7 +222,7 @@ export function GoalsTab({ portfolioDerived, debts, setDebts, settings, setSetti
         <div style={{ fontSize:12, color:palette.sub, marginBottom:14 }}>Hucha para 2 tramos en nov–dic 2026 (financiada con AW liberado + Kindle liberado + ~50€/mes caprichos, ventana {BTC_OP_GOAL.window}).</div>
         <div className="eyebrow" style={{ marginBottom:8 }}>3 condiciones inamovibles</div>
         <label style={{ display:"flex", gap:8, alignItems:"center", marginBottom:8, fontSize:12.5, color: emergencyFundMet?palette.sub:palette.bad }}>
-          <input type="checkbox" checked={emergencyFundMet} disabled readOnly /> Fondo de emergencia &gt;1.000€ intacto
+          <input type="checkbox" checked={emergencyFundMet} disabled readOnly /> Fondo de emergencia &gt;{currencyFormatter.euro(effectiveWealthTargets.minimumFund)} intacto
         </label>
         <label style={{ display:"flex", gap:8, alignItems:"center", marginBottom:8, fontSize:12.5, color:palette.sub }}>
           <input type="checkbox" checked={btcConditions.disposable} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>updateBtcConditions(conditions=>({...conditions,disposable:event.target.checked}))} /> Dinero prescindible (no del fondo)

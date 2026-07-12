@@ -32,3 +32,24 @@ test.describe("Wealth tab persistence", () => {
     await expect(page.getByRole("textbox", { name: "Nombre" }).first()).toHaveValue(editedPositionName);
   });
 });
+
+test.describe("Wealth targets persistence", () => {
+  test("should persist an edited emergency fund target after reloading the page", async ({ page }) => {
+    await page.goto("/");
+
+    await page.getByRole("button", { name: "Editar objetivos" }).click();
+
+    const emergencyFundInput = page.getByRole("spinbutton", { name: "Fondo de emergencia objetivo (€)" });
+    await expect(emergencyFundInput).toBeVisible();
+
+    const editedEmergencyFund = "6000";
+    await emergencyFundInput.fill(editedEmergencyFund);
+    await emergencyFundInput.blur();
+
+    await page.waitForTimeout(PERSIST_SETTLE_MS);
+    await page.reload();
+
+    await page.getByRole("button", { name: "Editar objetivos" }).click();
+    await expect(page.getByRole("spinbutton", { name: "Fondo de emergencia objetivo (€)" })).toHaveValue(editedEmergencyFund);
+  });
+});

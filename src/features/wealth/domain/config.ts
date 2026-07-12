@@ -1,11 +1,5 @@
 import type { Composition } from "@/features/wealth/domain/types";
 
-export const TARGETS = {
-  emergencyFund: 4900, minimumFund: 1000,
-  equityTargets: { world: 60, em: 20, nasdaq: 20 },
-  btcPause: 40, btcSell: 50, btcPauseThreshold: 10000, btcSellThreshold: 20000,
-};
-
 // Composición de índices (orientativa, jun 2026). Clave = id de la posición.
 export const COMPOSITIONS: Record<string, Composition> = {
   world: { name: "Fidelity MSCI World",

@@ -17,9 +17,10 @@ export class PositionRowMapper {
     };
   }
 
-  toRow(position: Position, updatedAt: number): NewPositionRow {
+  toRow(position: Position, userId: string, updatedAt: number): NewPositionRow {
     return {
       id: position.id,
+      userId,
       name: position.name,
       ticker: position.ticker,
       type: position.type,

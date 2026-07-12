@@ -9,13 +9,15 @@ import { palette, seriesColorAt } from "@/lib/theme";
 import { currencyFormatter } from "@/lib/CurrencyFormatter";
 import { idGenerator } from "@/lib/IdGenerator";
 import type { Position, PortfolioHistoryPoint, PositionType, CompositionItem } from "@/features/wealth/domain/types";
-import { TARGETS, COMPOSITIONS } from "@/features/wealth/domain/config";
+import { COMPOSITIONS } from "@/features/wealth/domain/config";
+import type { WealthTargets } from "@/features/wealth/domain/WealthTargets";
 import type { PortfolioDerived } from "@/features/wealth/domain/PortfolioCalculator";
 import type { HistoryRange } from "@/features/wealth/domain/HistoryRange";
 import type { PositionPricingResult } from "@/features/wealth/application/RefreshPositionPrices";
 import type { PortfolioHistoryResult } from "@/features/wealth/application/ComputePortfolioHistory";
 import type { Debt } from "@/shared/domain/types";
 import { Metric } from "@/shared/ui/Metric";
+import { WealthTargetsOnboarding } from "@/features/wealth/components/WealthTargetsOnboarding";
 
 interface Alert {
   kind: "good" | "warn" | "bad";
@@ -29,6 +31,8 @@ export interface WealthTabProps {
   setPortfolio: React.Dispatch<React.SetStateAction<Position[]>>;
   portfolioDerived: PortfolioDerived;
   debts: Debt[];
+  wealthTargets: WealthTargets | null;
+  setWealthTargets: React.Dispatch<React.SetStateAction<WealthTargets | null>>;
 }
 
 type EditablePositionField = "name" | "type" | "ticker" | "units" | "price";
@@ -38,9 +42,10 @@ const HISTORY_RANGE_OPTIONS: Array<[HistoryRange, string]> = [
   ["1d", "Día"], ["1w", "Semana"], ["1m", "Mes"], ["ytd", "YTD"], ["1y", "Año"],
 ];
 
-export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts }: WealthTabProps): React.JSX.Element {
+export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts, wealthTargets, setWealthTargets }: WealthTabProps): React.JSX.Element {
   const [stagflation, setStagflation] = useState<boolean>(true);
   const [editing, setEditing] = useState<boolean>(false);
+  const [editingTargets, setEditingTargets] = useState<boolean>(false);
   const [drilldown, setDrilldown] = useState<string>("world");
   const [view, setView] = useState<CompositionView>("countries");
   const [loadingPrices, setLoadingPrices] = useState<boolean>(false);
@@ -67,38 +72,38 @@ export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts }: 
     return daysLeft;
   })();
 
-  const alerts = ((): Alert[] => {
+  const alerts: Alert[] = wealthTargets == null ? [] : ((targets: WealthTargets): Alert[] => {
     const list: Alert[] = [];
     if (appleWatchDaysLeft != null && appleWatchDaysLeft >= 0)
       list.push({ kind: appleWatchDaysLeft <= 3 ? "bad" : "warn", message: `Liquidar Apple Watch: quedan ${appleWatchDaysLeft} día${appleWatchDaysLeft===1?"":"s"} (antes del 10 de julio).` });
-    if (liquidityTotal < TARGETS.minimumFund)
-      list.push({ kind:"warn", message:`Fondo de emergencia por debajo del mínimo de ${currencyFormatter.euro(TARGETS.minimumFund)}. Es la prioridad.` });
-    if (btcWeightTotal > TARGETS.btcSell && total > TARGETS.btcSellThreshold)
-      list.push({ kind:"bad", message:`BTC supera el 50% con cartera >20k: toca venta parcial hasta el 30%.` });
-    else if (btcWeightTotal > TARGETS.btcPause && total > TARGETS.btcPauseThreshold)
-      list.push({ kind:"warn", message:`BTC supera el 40% con cartera >10k: pausar aportaciones de BTC.` });
-    const worldWeightDeviation = Math.abs(equityWeightOf("world") - TARGETS.equityTargets.world);
-    if (equity && worldWeightDeviation > 8) list.push({ kind:"warn", message:`World desviado ${worldWeightDeviation.toFixed(0)} pts del objetivo 60%. El DCA lo corrige.` });
-    if (liquidityTotal >= TARGETS.emergencyFund)
-      list.push({ kind:"good", message:`Fondo de emergencia completo (${currencyFormatter.euro(TARGETS.emergencyFund)}). Replantea virar a inversión.` });
+    if (liquidityTotal < targets.minimumFund)
+      list.push({ kind:"warn", message:`Fondo de emergencia por debajo del mínimo de ${currencyFormatter.euro(targets.minimumFund)}. Es la prioridad.` });
+    if (btcWeightTotal > targets.btcSellWeight && total > targets.btcSellCapital)
+      list.push({ kind:"bad", message:`BTC supera el ${targets.btcSellWeight}% con cartera >${currencyFormatter.euro(targets.btcSellCapital)}: toca venta parcial hasta el 30%.` });
+    else if (btcWeightTotal > targets.btcPauseWeight && total > targets.btcPauseCapital)
+      list.push({ kind:"warn", message:`BTC supera el ${targets.btcPauseWeight}% con cartera >${currencyFormatter.euro(targets.btcPauseCapital)}: pausar aportaciones de BTC.` });
+    const worldWeightDeviation = Math.abs(equityWeightOf("world") - targets.equityTargets.world);
+    if (equity && worldWeightDeviation > 8) list.push({ kind:"warn", message:`World desviado ${worldWeightDeviation.toFixed(0)} pts del objetivo ${targets.equityTargets.world}%. El DCA lo corrige.` });
+    if (liquidityTotal >= targets.emergencyFund)
+      list.push({ kind:"good", message:`Fondo de emergencia completo (${currencyFormatter.euro(targets.emergencyFund)}). Replantea virar a inversión.` });
     if (list.length === 0) list.push({ kind:"good", message:"Todo dentro de plan. Sigue con el DCA." });
     return list;
-  })();
+  })(wealthTargets);
 
-  const score = ((): { total: number; breakdown: Array<[string, number]> } => {
+  const score: { total: number; breakdown: Array<[string, number]> } | null = wealthTargets == null ? null : ((targets: WealthTargets): { total: number; breakdown: Array<[string, number]> } => {
     let sum = 0; const breakdown: Array<[string, number]> = [];
     sum += 10*0.15; breakdown.push(["Estructura y fiscalidad", 10]);
     sum += 10*0.10; breakdown.push(["Costes (TER bajos)", 10]);
-    const equityWeightDeviation = (Math.abs(equityWeightOf("world")-60)+Math.abs(equityWeightOf("em")-20)+Math.abs(equityWeightOf("nasdaq")-20))/3;
+    const equityWeightDeviation = (Math.abs(equityWeightOf("world")-targets.equityTargets.world)+Math.abs(equityWeightOf("em")-targets.equityTargets.em)+Math.abs(equityWeightOf("nasdaq")-targets.equityTargets.nasdaq))/3;
     const diversification = equity ? Math.max(4, 10 - equityWeightDeviation/2) : 6;
     sum += diversification*0.20; breakdown.push(["Diversificación RV", diversification]);
-    const fundRatio = Math.min(1, liquidityTotal / TARGETS.emergencyFund);
+    const fundRatio = Math.min(1, liquidityTotal / targets.emergencyFund);
     const cushion = 2 + fundRatio*8; sum += cushion*0.30; breakdown.push(["Colchón de emergencia", cushion]);
     const btcSafe = btcWeightTotal <= 20 ? 10 : Math.max(3, 10-(btcWeightTotal-20)/3);
     sum += btcSafe*0.10; breakdown.push(["Riesgo Bitcoin", btcSafe]);
     const size = Math.min(10, 3 + total/8000); sum += size*0.15; breakdown.push(["Tamaño de cartera", size]);
     return { total: sum, breakdown };
-  })();
+  })(wealthTargets);
 
   const portfolioPie = withValue
     .map((position, index) => ({ name: position.name, value: position.value, color: seriesColorAt(index) }))
@@ -173,16 +178,34 @@ export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts }: 
     return () => clearTimeout(historyFetchId);
   }, [historyRange, loadHistory]);
 
-  const scoreColor = score.total >= 8 ? palette.acc : score.total >= 6 ? palette.warn : palette.bad;
+  const scoreColor = score == null ? palette.faint : score.total >= 8 ? palette.acc : score.total >= 6 ? palette.warn : palette.bad;
   const POSITION_TYPE_LABEL: Record<PositionType, string> = { fondo:"Fondo", etf:"ETF", cripto:"Cripto", efectivo:"Efectivo" };
   const availableTypes: PositionType[] = ["fondo","etf","cripto","efectivo"];
-  const equityRows: Array<[string, string, number]> = [["world","World",60],["em","Emergentes",20],["nasdaq","Nasdaq",20]];
+  const equityRows: Array<[string, string, number]> = wealthTargets == null ? [] : [
+    ["world","World",wealthTargets.equityTargets.world],
+    ["em","Emergentes",wealthTargets.equityTargets.em],
+    ["nasdaq","Nasdaq",wealthTargets.equityTargets.nasdaq],
+  ];
+
+  const updateWealthTargets = (updater: (targets: WealthTargets) => WealthTargets): void =>
+    setWealthTargets(previous => (previous ? updater(previous) : previous));
+  const setEmergencyFund = (value: number): void => updateWealthTargets(targets => ({ ...targets, emergencyFund: value }));
+  const setMinimumFund = (value: number): void => updateWealthTargets(targets => ({ ...targets, minimumFund: value }));
+  const setEquityTarget = (key: keyof WealthTargets["equityTargets"], value: number): void =>
+    updateWealthTargets(targets => ({ ...targets, equityTargets: { ...targets.equityTargets, [key]: value } }));
+  const setBtcPauseWeight = (value: number): void => updateWealthTargets(targets => ({ ...targets, btcPauseWeight: value }));
+  const setBtcSellWeight = (value: number): void => updateWealthTargets(targets => ({ ...targets, btcSellWeight: value }));
+  const setBtcPauseCapital = (value: number): void => updateWealthTargets(targets => ({ ...targets, btcPauseCapital: value }));
+  const setBtcSellCapital = (value: number): void => updateWealthTargets(targets => ({ ...targets, btcSellCapital: value }));
 
   return (
     <>
       <div style={{ display:"flex", gap:10, flexWrap:"wrap", marginBottom:8, justifyContent:"flex-start" }}>
         <button className="seg" onClick={refreshPrices} disabled={loadingPrices}>{loadingPrices ? "Actualizando…" : "↻ Actualizar precios"}</button>
         <button className="seg on" onClick={() => setEditing(previous => !previous)}>{editing ? "Cerrar edición" : "Editar cartera"}</button>
+        {wealthTargets != null && (
+          <button className="seg" onClick={() => setEditingTargets(previous => !previous)}>{editingTargets ? "Cerrar edición" : "Editar objetivos"}</button>
+        )}
       </div>
       {priceRefreshWarning && (
         <div style={{ marginBottom:16, fontSize:12.5, color:palette.warn }}>{priceRefreshWarning}</div>
@@ -278,22 +301,79 @@ export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts }: 
         </div>
       )}
 
+      {editingTargets && wealthTargets != null && (
+        <div className="card" style={{ marginBottom:16 }}>
+          <div className="eyebrow" style={{ marginBottom:6 }}>Editar objetivos</div>
+          <p style={{ margin:"0 0 16px", fontSize:12.5, color:palette.sub, lineHeight:1.5 }}>
+            Ajusta tu fondo de emergencia objetivo/mínimo, la distribución objetivo de renta variable y los umbrales de Bitcoin.
+          </p>
+          <div className="grid" style={{ gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))" }}>
+            <label>
+              <div style={{ fontSize:11, color:palette.sub, marginBottom:3 }}>Fondo de emergencia objetivo (€)</div>
+              <input className="inp" type="number" step="any" value={wealthTargets.emergencyFund} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setEmergencyFund(parseFloat(event.target.value)||0)} />
+            </label>
+            <label>
+              <div style={{ fontSize:11, color:palette.sub, marginBottom:3 }}>Fondo de emergencia mínimo (€)</div>
+              <input className="inp" type="number" step="any" value={wealthTargets.minimumFund} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setMinimumFund(parseFloat(event.target.value)||0)} />
+            </label>
+            <label>
+              <div style={{ fontSize:11, color:palette.sub, marginBottom:3 }}>Objetivo RV World (%)</div>
+              <input className="inp" type="number" step="any" value={wealthTargets.equityTargets.world} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setEquityTarget("world", parseFloat(event.target.value)||0)} />
+            </label>
+            <label>
+              <div style={{ fontSize:11, color:palette.sub, marginBottom:3 }}>Objetivo RV Emergentes (%)</div>
+              <input className="inp" type="number" step="any" value={wealthTargets.equityTargets.em} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setEquityTarget("em", parseFloat(event.target.value)||0)} />
+            </label>
+            <label>
+              <div style={{ fontSize:11, color:palette.sub, marginBottom:3 }}>Objetivo RV Nasdaq (%)</div>
+              <input className="inp" type="number" step="any" value={wealthTargets.equityTargets.nasdaq} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setEquityTarget("nasdaq", parseFloat(event.target.value)||0)} />
+            </label>
+            <label>
+              <div style={{ fontSize:11, color:palette.sub, marginBottom:3 }}>Peso BTC para pausar aportaciones (%)</div>
+              <input className="inp" type="number" step="any" value={wealthTargets.btcPauseWeight} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setBtcPauseWeight(parseFloat(event.target.value)||0)} />
+            </label>
+            <label>
+              <div style={{ fontSize:11, color:palette.sub, marginBottom:3 }}>Peso BTC para venta parcial (%)</div>
+              <input className="inp" type="number" step="any" value={wealthTargets.btcSellWeight} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setBtcSellWeight(parseFloat(event.target.value)||0)} />
+            </label>
+            <label>
+              <div style={{ fontSize:11, color:palette.sub, marginBottom:3 }}>Capital cartera para pausar BTC (€)</div>
+              <input className="inp" type="number" step="any" value={wealthTargets.btcPauseCapital} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setBtcPauseCapital(parseFloat(event.target.value)||0)} />
+            </label>
+            <label>
+              <div style={{ fontSize:11, color:palette.sub, marginBottom:3 }}>Capital cartera para vender BTC (€)</div>
+              <input className="inp" type="number" step="any" value={wealthTargets.btcSellCapital} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setBtcSellCapital(parseFloat(event.target.value)||0)} />
+            </label>
+          </div>
+        </div>
+      )}
+
       <div className="grid" style={{ gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,340px),1fr))" }}>
+
+        {wealthTargets == null && <WealthTargetsOnboarding onCreateTargets={setWealthTargets} />}
 
         <div className="card">
           <div className="eyebrow" style={{ marginBottom:16 }}>Nota de la cartera</div>
-          <div style={{ display:"flex", alignItems:"baseline", gap:12, marginBottom:18 }}>
-            <span className="num disp" style={{ fontSize:56, fontWeight:600, color:scoreColor, lineHeight:1 }}>{score.total.toFixed(1)}</span>
-            <span className="num" style={{ fontSize:20, color:palette.faint }}>/ 10</span>
-          </div>
-          {score.breakdown.map(([name,value]) => (
-            <div key={name} style={{ marginBottom:10 }}>
-              <div style={{ display:"flex", justifyContent:"space-between", fontSize:12.5, marginBottom:4 }}>
-                <span style={{ color:palette.sub }}>{name}</span><span className="num" style={{ color:palette.ink }}>{value.toFixed(1)}</span>
-              </div>
-              <div className="barra"><div className="barra-fill" style={{ width:`${value*10}%`, background: value>=8?palette.acc:value>=6?palette.warn:palette.bad }} /></div>
+          {score == null ? (
+            <div style={{ fontSize:12.5, color:palette.faint, lineHeight:1.5 }}>
+              Configura tus objetivos de patrimonio para ver tu nota de cartera.
             </div>
-          ))}
+          ) : (
+            <>
+              <div style={{ display:"flex", alignItems:"baseline", gap:12, marginBottom:18 }}>
+                <span className="num disp" style={{ fontSize:56, fontWeight:600, color:scoreColor, lineHeight:1 }}>{score.total.toFixed(1)}</span>
+                <span className="num" style={{ fontSize:20, color:palette.faint }}>/ 10</span>
+              </div>
+              {score.breakdown.map(([name,value]) => (
+                <div key={name} style={{ marginBottom:10 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", fontSize:12.5, marginBottom:4 }}>
+                    <span style={{ color:palette.sub }}>{name}</span><span className="num" style={{ color:palette.ink }}>{value.toFixed(1)}</span>
+                  </div>
+                  <div className="barra"><div className="barra-fill" style={{ width:`${value*10}%`, background: value>=8?palette.acc:value>=6?palette.warn:palette.bad }} /></div>
+                </div>
+              ))}
+            </>
+          )}
         </div>
 
         <div className="card">
@@ -326,41 +406,59 @@ export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts }: 
 
         <div className="card">
           <div className="eyebrow" style={{ marginBottom:16 }}>Estado del plan</div>
-          {alerts.map((alertItem,alertIndex) => (
-            <div key={alertIndex} style={{ display:"flex", gap:10, marginBottom:12, alignItems:"flex-start" }}>
-              <span style={{ marginTop:2, width:8, height:8, borderRadius:"50%", flexShrink:0, background: alertItem.kind==="good"?palette.acc:alertItem.kind==="warn"?palette.warn:palette.bad }} />
-              <span style={{ fontSize:13, lineHeight:1.5, color: alertItem.kind==="good"?palette.sub:palette.ink }}>{alertItem.message}</span>
+          {wealthTargets == null ? (
+            <div style={{ fontSize:12.5, color:palette.faint, lineHeight:1.5 }}>
+              Configura tus objetivos de patrimonio para ver el estado de tu plan.
             </div>
-          ))}
-          <div style={{ marginTop:16, paddingTop:16, borderTop:`1px solid ${palette.line}` }}>
-            <div style={{ display:"flex", justifyContent:"space-between", fontSize:12.5, color:palette.sub, marginBottom:6 }}>
-              <span>Reglas BTC (por peso)</span><span className="num">{currencyFormatter.percent(btcWeightTotal)} actual</span>
-            </div>
-            <div style={{ fontSize:11.5, color:palette.faint, lineHeight:1.6 }}>Pausar si &gt;40% y cartera &gt;10k · Vender si &gt;50% y cartera &gt;20k</div>
-          </div>
+          ) : (
+            <>
+              {alerts.map((alertItem,alertIndex) => (
+                <div key={alertIndex} style={{ display:"flex", gap:10, marginBottom:12, alignItems:"flex-start" }}>
+                  <span style={{ marginTop:2, width:8, height:8, borderRadius:"50%", flexShrink:0, background: alertItem.kind==="good"?palette.acc:alertItem.kind==="warn"?palette.warn:palette.bad }} />
+                  <span style={{ fontSize:13, lineHeight:1.5, color: alertItem.kind==="good"?palette.sub:palette.ink }}>{alertItem.message}</span>
+                </div>
+              ))}
+              <div style={{ marginTop:16, paddingTop:16, borderTop:`1px solid ${palette.line}` }}>
+                <div style={{ display:"flex", justifyContent:"space-between", fontSize:12.5, color:palette.sub, marginBottom:6 }}>
+                  <span>Reglas BTC (por peso)</span><span className="num">{currencyFormatter.percent(btcWeightTotal)} actual</span>
+                </div>
+                <div style={{ fontSize:11.5, color:palette.faint, lineHeight:1.6 }}>
+                  Pausar si &gt;{wealthTargets.btcPauseWeight}% y cartera &gt;{wealthTargets.btcPauseCapital/1000}k · Vender si &gt;{wealthTargets.btcSellWeight}% y cartera &gt;{wealthTargets.btcSellCapital/1000}k
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="card span-full">
           <div className="eyebrow" style={{ marginBottom:16 }}>Renta variable · real vs objetivo {stagflation && <span style={{color:palette.warn}}>· estanflación</span>}</div>
-          {equityRows.map(([key,label,target]) => {
-            const exists = portfolio.some(position => position.id === key);
-            const weight = equityWeightOf(key);
-            return (
-              <div key={key} style={{ marginBottom:16, opacity: exists?1:.4 }}>
-                <div style={{ display:"flex", justifyContent:"space-between", fontSize:13, marginBottom:5 }}>
-                  <span style={{ color:palette.ink }}>{label}</span>
-                  <span className="num"><span style={{color:palette.ink}}>{currencyFormatter.percent(weight)}</span> <span style={{color:palette.faint}}>/ {target}%</span></span>
-                </div>
-                <div style={{ position:"relative", height:7, background:palette.panel2, borderRadius:4 }}>
-                  <div style={{ position:"absolute", left:`${target}%`, top:-2, bottom:-2, width:2, background:palette.faint, opacity:.7 }} />
-                  <div style={{ height:"100%", width:`${Math.min(100,weight)}%`, background:palette.acc, borderRadius:4 }} />
-                </div>
-              </div>
-            );
-          })}
-          <button className="seg" style={{ marginTop:4, width:"100%" }} onClick={() => setStagflation(previous=>!previous)}>
-            Modo estanflación: {stagflation ? "activo (120/60/20)" : "normal (120/40/40)"}
-          </button>
+          {wealthTargets == null ? (
+            <div style={{ fontSize:12.5, color:palette.faint, lineHeight:1.5 }}>
+              Configura tus objetivos de patrimonio para ver la renta variable real frente al objetivo.
+            </div>
+          ) : (
+            <>
+              {equityRows.map(([key,label,target]) => {
+                const exists = portfolio.some(position => position.id === key);
+                const weight = equityWeightOf(key);
+                return (
+                  <div key={key} style={{ marginBottom:16, opacity: exists?1:.4 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", fontSize:13, marginBottom:5 }}>
+                      <span style={{ color:palette.ink }}>{label}</span>
+                      <span className="num"><span style={{color:palette.ink}}>{currencyFormatter.percent(weight)}</span> <span style={{color:palette.faint}}>/ {target}%</span></span>
+                    </div>
+                    <div style={{ position:"relative", height:7, background:palette.panel2, borderRadius:4 }}>
+                      <div style={{ position:"absolute", left:`${target}%`, top:-2, bottom:-2, width:2, background:palette.faint, opacity:.7 }} />
+                      <div style={{ height:"100%", width:`${Math.min(100,weight)}%`, background:palette.acc, borderRadius:4 }} />
+                    </div>
+                  </div>
+                );
+              })}
+              <button className="seg" style={{ marginTop:4, width:"100%" }} onClick={() => setStagflation(previous=>!previous)}>
+                Modo estanflación: {stagflation ? "activo (120/60/20)" : "normal (120/40/40)"}
+              </button>
+            </>
+          )}
         </div>
 
         <div className="card span-full">
@@ -398,19 +496,27 @@ export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts }: 
 
         <div className={compositionKeys.length > 0 ? "card" : "card span-full"}>
           <div className="eyebrow" style={{ marginBottom:14 }}>Fondo de emergencia / casa</div>
-          <div style={{ display:"flex", alignItems:"baseline", gap:8, marginBottom:4 }}>
-            <span className="num disp" style={{ fontSize:34, fontWeight:600 }}>{currencyFormatter.euro(liquidityTotal)}</span>
-            <span className="num" style={{ color:palette.faint }}>/ {currencyFormatter.euro(TARGETS.emergencyFund)}</span>
-          </div>
-          <div style={{ height:10, background:palette.panel2, borderRadius:6, overflow:"hidden", margin:"14px 0 10px", position:"relative" }}>
-            <div style={{ position:"absolute", left:`${TARGETS.minimumFund/TARGETS.emergencyFund*100}%`, top:0, bottom:0, width:2, background:palette.ink, opacity:.5, zIndex:2 }} />
-            <div style={{ height:"100%", width:`${Math.min(100,liquidityTotal/TARGETS.emergencyFund*100)}%`, background:`linear-gradient(90deg,${palette.faint},${palette.acc})`, borderRadius:6 }} />
-          </div>
-          <div style={{ fontSize:12, color:palette.sub }}>
-            {liquidityTotal < TARGETS.minimumFund
-              ? `Faltan ${currencyFormatter.euro(TARGETS.minimumFund-liquidityTotal)} para el mínimo intocable.`
-              : `${currencyFormatter.percent(liquidityTotal/TARGETS.emergencyFund*100)} del objetivo. Cubre ~${(liquidityTotal/778.89).toFixed(1)} meses de gastos.`}
-          </div>
+          {wealthTargets == null ? (
+            <div style={{ fontSize:12.5, color:palette.faint, lineHeight:1.5 }}>
+              Configura tus objetivos de patrimonio para ver el progreso del fondo de emergencia.
+            </div>
+          ) : (
+            <>
+              <div style={{ display:"flex", alignItems:"baseline", gap:8, marginBottom:4 }}>
+                <span className="num disp" style={{ fontSize:34, fontWeight:600 }}>{currencyFormatter.euro(liquidityTotal)}</span>
+                <span className="num" style={{ color:palette.faint }}>/ {currencyFormatter.euro(wealthTargets.emergencyFund)}</span>
+              </div>
+              <div style={{ height:10, background:palette.panel2, borderRadius:6, overflow:"hidden", margin:"14px 0 10px", position:"relative" }}>
+                <div style={{ position:"absolute", left:`${wealthTargets.minimumFund/wealthTargets.emergencyFund*100}%`, top:0, bottom:0, width:2, background:palette.ink, opacity:.5, zIndex:2 }} />
+                <div style={{ height:"100%", width:`${Math.min(100,liquidityTotal/wealthTargets.emergencyFund*100)}%`, background:`linear-gradient(90deg,${palette.faint},${palette.acc})`, borderRadius:6 }} />
+              </div>
+              <div style={{ fontSize:12, color:palette.sub }}>
+                {liquidityTotal < wealthTargets.minimumFund
+                  ? `Faltan ${currencyFormatter.euro(wealthTargets.minimumFund-liquidityTotal)} para el mínimo intocable.`
+                  : `${currencyFormatter.percent(liquidityTotal/wealthTargets.emergencyFund*100)} del objetivo. Cubre ~${(liquidityTotal/778.89).toFixed(1)} meses de gastos.`}
+              </div>
+            </>
+          )}
         </div>
 
         {compositionKeys.length > 0 && (

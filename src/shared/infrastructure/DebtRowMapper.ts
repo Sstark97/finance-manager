@@ -16,9 +16,10 @@ export class DebtRowMapper {
     };
   }
 
-  toRow(debt: Debt): NewDebtRow {
+  toRow(debt: Debt, userId: string): NewDebtRow {
     return {
       id: debt.id,
+      userId,
       name: debt.name,
       installment: debt.installment,
       balance: debt.balance,

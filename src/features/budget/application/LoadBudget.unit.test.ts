@@ -43,7 +43,7 @@ describe("LoadBudget", () => {
     const months: Month[] = [{ id: "month-1", date: new Date("2026-06-01"), label: "jun 26", overrides: {}, actual: {}, events: [], netIncomeOverride: null }];
     const useCase = new LoadBudget(new FakeBudgetRepository(baseBudget, fixedExpenseItems), new FakeMonthRepository(months));
 
-    const snapshot = await useCase.invoke();
+    const snapshot = await useCase.invoke("user-1");
 
     expect(snapshot).toEqual({ baseBudget, fixedExpenseItems, months });
   });
@@ -51,7 +51,7 @@ describe("LoadBudget", () => {
   it("should propagate a null base budget when it has not been configured yet", async () => {
     const useCase = new LoadBudget(new FakeBudgetRepository(null, []), new FakeMonthRepository([]));
 
-    const snapshot = await useCase.invoke();
+    const snapshot = await useCase.invoke("user-1");
 
     expect(snapshot.baseBudget).toBeNull();
   });

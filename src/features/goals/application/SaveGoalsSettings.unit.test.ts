@@ -4,19 +4,21 @@ import type { GoalsSettingsRepository } from "@/features/goals/application/Goals
 import type { GoalsSettings } from "@/features/goals/application/GoalsSettings";
 
 class RecordingGoalsSettingsRepository implements GoalsSettingsRepository {
+  savedUserId: string | null = null;
   savedSettings: GoalsSettings | null = null;
 
   async find(): Promise<GoalsSettings> {
     throw new Error("not used in this test");
   }
 
-  async save(settings: GoalsSettings): Promise<void> {
+  async save(userId: string, settings: GoalsSettings): Promise<void> {
+    this.savedUserId = userId;
     this.savedSettings = settings;
   }
 }
 
 describe("SaveGoalsSettings", () => {
-  it("should persist the given settings through the repository", async () => {
+  it("should persist the given settings for the given user through the repository", async () => {
     const repository = new RecordingGoalsSettingsRepository();
     const useCase = new SaveGoalsSettings(repository);
     const settings: GoalsSettings = {
@@ -24,8 +26,9 @@ describe("SaveGoalsSettings", () => {
       btcConditions: { disposable: true, dcaActive: true }, countCar: true,
     };
 
-    await useCase.invoke(settings);
+    await useCase.invoke("user-1", settings);
 
+    expect(repository.savedUserId).toBe("user-1");
     expect(repository.savedSettings).toEqual(settings);
   });
 });

@@ -7,6 +7,7 @@ test.describe("Budget tab persistence", () => {
   test("should persist an edited actual amount for a category after saving and reloading the page", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("button", { name: "Presupuesto" }).click();
+    await page.getByRole("button", { name: /desglose/ }).click();
 
     const inversionActualInput = page.getByRole("spinbutton", { name: "Real" }).nth(INVERSION_CATEGORY_INDEX);
     await expect(inversionActualInput).toBeVisible();
@@ -21,6 +22,7 @@ test.describe("Budget tab persistence", () => {
     await page.reload();
 
     await page.getByRole("button", { name: "Presupuesto" }).click();
+    await page.getByRole("button", { name: /desglose/ }).click();
     await expect(page.getByRole("spinbutton", { name: "Real" }).nth(INVERSION_CATEGORY_INDEX)).toHaveValue(editedActualAmount);
   });
 });

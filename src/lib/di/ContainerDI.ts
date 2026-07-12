@@ -27,12 +27,23 @@ import { TursoGoalsSettingsRepository } from "@/features/goals/infrastructure/Tu
 import { LoadGoalsSettings, type LoadGoalsSettingsUseCase } from "@/features/goals/application/LoadGoalsSettings";
 import { SaveGoalsSettings, type SaveGoalsSettingsUseCase } from "@/features/goals/application/SaveGoalsSettings";
 
+import { TursoWealthTargetsRepository } from "@/features/wealth/infrastructure/TursoWealthTargetsRepository";
+import { LoadWealthTargets, type LoadWealthTargetsUseCase } from "@/features/wealth/application/LoadWealthTargets";
+import { SaveWealthTargets, type SaveWealthTargetsUseCase } from "@/features/wealth/application/SaveWealthTargets";
+
+import { TursoUserRepository } from "@/features/auth/infrastructure/TursoUserRepository";
+import { BcryptPasswordHasher } from "@/features/auth/infrastructure/BcryptPasswordHasher";
+import { RegisterUser, type RegisterUserUseCase } from "@/features/auth/application/RegisterUser";
+import { AuthenticateWithCredentials, type AuthenticateWithCredentialsUseCase } from "@/features/auth/application/AuthenticateWithCredentials";
+
 export class ContainerDI {
   private readonly assetPriceGateway = new CachingAssetPriceGateway(new YahooFinanceAssetPriceGateway());
   private readonly refreshPositionPricesUseCase = new RefreshPositionPrices(this.assetPriceGateway, new PortfolioCalculator());
 
   private readonly assetPriceHistoryGateway = new CachingAssetPriceHistoryGateway(new YahooFinanceAssetPriceHistoryGateway());
   private readonly computePortfolioHistoryUseCase = new ComputePortfolioHistory(this.assetPriceHistoryGateway, new PortfolioHistoryCalculator());
+
+  private readonly passwordHasher = new BcryptPasswordHasher();
 
   private cachedDatabase: Database | null = null;
 
@@ -76,7 +87,23 @@ export class ContainerDI {
     return new SaveGoalsSettings(new TursoGoalsSettingsRepository(this.database()));
   }
 
-  private database(): Database {
+  loadWealthTargets(): LoadWealthTargetsUseCase {
+    return new LoadWealthTargets(new TursoWealthTargetsRepository(this.database()));
+  }
+
+  saveWealthTargets(): SaveWealthTargetsUseCase {
+    return new SaveWealthTargets(new TursoWealthTargetsRepository(this.database()));
+  }
+
+  registerUser(): RegisterUserUseCase {
+    return new RegisterUser(new TursoUserRepository(this.database()), this.passwordHasher);
+  }
+
+  authenticateWithCredentials(): AuthenticateWithCredentialsUseCase {
+    return new AuthenticateWithCredentials(new TursoUserRepository(this.database()), this.passwordHasher);
+  }
+
+  database(): Database {
     if (!this.cachedDatabase) {
       this.cachedDatabase = TursoClientFactory.toDatabase(new TursoClientFactory().create());
     }

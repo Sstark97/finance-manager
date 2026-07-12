@@ -10,6 +10,8 @@ describe("TursoDebtRepository", () => {
   beforeEach(async () => {
     testDatabase = await new TestDatabaseFactory().create();
     repository = new TursoDebtRepository(testDatabase.database);
+    await testDatabase.seedUser("user-1");
+    await testDatabase.seedUser("user-2");
   });
 
   afterEach(async () => {
@@ -17,7 +19,7 @@ describe("TursoDebtRepository", () => {
   });
 
   it("should return an empty list when no debt has been saved yet", async () => {
-    const debts = await repository.findAll();
+    const debts = await repository.findAll("user-1");
 
     expect(debts).toEqual([]);
   });
@@ -25,8 +27,8 @@ describe("TursoDebtRepository", () => {
   it("should round-trip a debt with a deadline through save and findAll", async () => {
     const appleWatchDebt: Debt = { id: "applewatch", name: "Apple Watch", installment: 75, balance: 105, note: "Liquidar antes de julio", deadline: "2026-07-10" };
 
-    await repository.saveAll([appleWatchDebt]);
-    const debts = await repository.findAll();
+    await repository.saveAll("user-1", [appleWatchDebt]);
+    const debts = await repository.findAll("user-1");
 
     expect(debts).toEqual([appleWatchDebt]);
   });
@@ -34,20 +36,43 @@ describe("TursoDebtRepository", () => {
   it("should round-trip a debt without a deadline as an undefined deadline", async () => {
     const kindleDebt: Debt = { id: "kindle", name: "Kindle", installment: 44, balance: 132, note: "Liquida en septiembre" };
 
-    await repository.saveAll([kindleDebt]);
-    const [debt] = await repository.findAll();
+    await repository.saveAll("user-1", [kindleDebt]);
+    const [debt] = await repository.findAll("user-1");
 
     expect(debt.deadline).toBeUndefined();
   });
 
-  it("should replace the previously saved debts when saveAll is called again", async () => {
+  it("should replace the previously saved debts when saveAll is called again for the same user", async () => {
     const kindleDebt: Debt = { id: "kindle", name: "Kindle", installment: 44, balance: 132, note: "Liquida en septiembre" };
     const carLoan: Debt = { id: "coche", name: "Coche", installment: 173.28, balance: 8000, note: "En curso" };
 
-    await repository.saveAll([kindleDebt]);
-    await repository.saveAll([carLoan]);
-    const debts = await repository.findAll();
+    await repository.saveAll("user-1", [kindleDebt]);
+    await repository.saveAll("user-1", [carLoan]);
+    const debts = await repository.findAll("user-1");
 
     expect(debts).toEqual([carLoan]);
+  });
+
+  it("should keep debts isolated per user so one user never sees another user's debts", async () => {
+    const kindleDebt: Debt = { id: "kindle", name: "Kindle", installment: 44, balance: 132, note: "Liquida en septiembre" };
+    const carLoan: Debt = { id: "coche", name: "Coche", installment: 173.28, balance: 8000, note: "En curso" };
+
+    await repository.saveAll("user-1", [kindleDebt]);
+    await repository.saveAll("user-2", [carLoan]);
+
+    expect(await repository.findAll("user-1")).toEqual([kindleDebt]);
+    expect(await repository.findAll("user-2")).toEqual([carLoan]);
+  });
+
+  it("should not delete another user's debts when saving the current user's debts", async () => {
+    const kindleDebt: Debt = { id: "kindle", name: "Kindle", installment: 44, balance: 132, note: "Liquida en septiembre" };
+    const carLoan: Debt = { id: "coche", name: "Coche", installment: 173.28, balance: 8000, note: "En curso" };
+    await repository.saveAll("user-1", [kindleDebt]);
+    await repository.saveAll("user-2", [carLoan]);
+
+    await repository.saveAll("user-1", []);
+
+    expect(await repository.findAll("user-1")).toEqual([]);
+    expect(await repository.findAll("user-2")).toEqual([carLoan]);
   });
 });

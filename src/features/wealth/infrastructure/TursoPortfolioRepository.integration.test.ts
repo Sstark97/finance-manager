@@ -10,6 +10,8 @@ describe("TursoPortfolioRepository", () => {
   beforeEach(async () => {
     testDatabase = await new TestDatabaseFactory().create();
     repository = new TursoPortfolioRepository(testDatabase.database);
+    await testDatabase.seedUser("user-1");
+    await testDatabase.seedUser("user-2");
   });
 
   afterEach(async () => {
@@ -17,7 +19,7 @@ describe("TursoPortfolioRepository", () => {
   });
 
   it("should return an empty list when no position has been saved yet", async () => {
-    const positions = await repository.findAll();
+    const positions = await repository.findAll("user-1");
 
     expect(positions).toEqual([]);
   });
@@ -25,20 +27,43 @@ describe("TursoPortfolioRepository", () => {
   it("should round-trip a priced position through save and findAll", async () => {
     const bitcoin: Position = { id: "btc", name: "Bitcoin", ticker: "BTC-EUR", type: "cripto", units: 0.003441, price: 60848, group: "btc" };
 
-    await repository.saveAll([bitcoin]);
-    const positions = await repository.findAll();
+    await repository.saveAll("user-1", [bitcoin]);
+    const positions = await repository.findAll("user-1");
 
     expect(positions).toEqual([bitcoin]);
   });
 
-  it("should replace the previously saved positions when saveAll is called again", async () => {
+  it("should replace the previously saved positions when saveAll is called again for the same user", async () => {
     const bitcoin: Position = { id: "btc", name: "Bitcoin", ticker: "BTC-EUR", type: "cripto", units: 0.003441, price: 60848, group: "btc" };
     const cash: Position = { id: "liquidez", name: "Fondo emergencia", ticker: "", type: "efectivo", units: 489.93, price: 1, group: "liquidez" };
 
-    await repository.saveAll([bitcoin]);
-    await repository.saveAll([cash]);
-    const positions = await repository.findAll();
+    await repository.saveAll("user-1", [bitcoin]);
+    await repository.saveAll("user-1", [cash]);
+    const positions = await repository.findAll("user-1");
 
     expect(positions).toEqual([cash]);
+  });
+
+  it("should keep positions isolated per user so one user never sees another user's portfolio", async () => {
+    const bitcoin: Position = { id: "btc", name: "Bitcoin", ticker: "BTC-EUR", type: "cripto", units: 0.003441, price: 60848, group: "btc" };
+    const cash: Position = { id: "liquidez", name: "Fondo emergencia", ticker: "", type: "efectivo", units: 489.93, price: 1, group: "liquidez" };
+
+    await repository.saveAll("user-1", [bitcoin]);
+    await repository.saveAll("user-2", [cash]);
+
+    expect(await repository.findAll("user-1")).toEqual([bitcoin]);
+    expect(await repository.findAll("user-2")).toEqual([cash]);
+  });
+
+  it("should not delete another user's positions when saving the current user's portfolio", async () => {
+    const bitcoin: Position = { id: "btc", name: "Bitcoin", ticker: "BTC-EUR", type: "cripto", units: 0.003441, price: 60848, group: "btc" };
+    const cash: Position = { id: "liquidez", name: "Fondo emergencia", ticker: "", type: "efectivo", units: 489.93, price: 1, group: "liquidez" };
+    await repository.saveAll("user-1", [bitcoin]);
+    await repository.saveAll("user-2", [cash]);
+
+    await repository.saveAll("user-1", []);
+
+    expect(await repository.findAll("user-1")).toEqual([]);
+    expect(await repository.findAll("user-2")).toEqual([cash]);
   });
 });

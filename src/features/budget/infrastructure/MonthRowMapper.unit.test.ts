@@ -4,7 +4,7 @@ import type { Month } from "@/features/budget/domain/types";
 
 describe("MonthRowMapper", () => {
   const mapper = new MonthRowMapper();
-  const monthRow = { id: "month-1", date: new Date("2026-06-01T00:00:00.000Z").getTime(), label: "jun 26", netIncomeOverride: null };
+  const monthRow = { id: "month-1", userId: "user-1", date: new Date("2026-06-01T00:00:00.000Z").getTime(), label: "jun 26", netIncomeOverride: null };
 
   it("should reconstruct a month with no overrides, actuals or events from empty child rows", () => {
     const month = mapper.toDomain(monthRow, [], []);
@@ -59,5 +59,16 @@ describe("MonthRowMapper", () => {
     const categoryRows = mapper.toCategoryRows(month);
 
     expect(categoryRows).toEqual([{ monthId: "month-1", categoryId: "inversion", overrideAmount: 225, actualAmount: 230 }]);
+  });
+
+  it("should map a month back into a row carrying the owning user", () => {
+    const month: Month = {
+      id: "month-1", date: new Date("2026-06-01T00:00:00.000Z"), label: "jun 26",
+      overrides: {}, actual: {}, events: [], netIncomeOverride: null,
+    };
+
+    const row = mapper.toMonthRow(month, "user-1");
+
+    expect(row).toEqual({ id: "month-1", userId: "user-1", date: month.date.getTime(), label: "jun 26", netIncomeOverride: null });
   });
 });

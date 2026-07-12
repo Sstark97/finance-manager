@@ -1,8 +1,6 @@
 import type { GoalsSettings } from "@/features/goals/application/GoalsSettings";
 import type { goalsSettings } from "@/infrastructure/db/schema";
 
-export const GOALS_SETTINGS_SINGLETON_ID = "default";
-
 type GoalsSettingsRow = typeof goalsSettings.$inferSelect;
 type NewGoalsSettingsRow = typeof goalsSettings.$inferInsert;
 
@@ -21,9 +19,9 @@ export class GoalsSettingsRowMapper {
     };
   }
 
-  toRow(settings: GoalsSettings): NewGoalsSettingsRow {
+  toRow(settings: GoalsSettings, userId: string): NewGoalsSettingsRow {
     return {
-      id: GOALS_SETTINGS_SINGLETON_ID,
+      userId,
       currentSalary: settings.currentSalary,
       fiContribution: settings.fiContribution,
       fiReturn: settings.fiReturn,

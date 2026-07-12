@@ -1,3 +1,4 @@
+import { eq, inArray } from "drizzle-orm";
 import type { Month } from "@/features/budget/domain/types";
 import type { MonthRepository } from "@/features/budget/application/MonthRepository";
 import type { DatabaseExecutor } from "@/infrastructure/db/client";
@@ -10,11 +11,16 @@ export class TursoMonthRepository implements MonthRepository {
     private readonly mapper: MonthRowMapper = new MonthRowMapper(),
   ) {}
 
-  async findAll(): Promise<Month[]> {
-    const [monthRows, categoryRows, eventRows] = await Promise.all([
-      this.database.select().from(budgetMonths).orderBy(budgetMonths.date),
-      this.database.select().from(budgetMonthCategories),
-      this.database.select().from(budgetEvents),
+  async findAll(userId: string): Promise<Month[]> {
+    const monthRows = await this.database.select().from(budgetMonths).where(eq(budgetMonths.userId, userId)).orderBy(budgetMonths.date);
+    const monthIds = monthRows.map((monthRow) => monthRow.id);
+    if (monthIds.length === 0) {
+      return [];
+    }
+
+    const [categoryRows, eventRows] = await Promise.all([
+      this.database.select().from(budgetMonthCategories).where(inArray(budgetMonthCategories.monthId, monthIds)),
+      this.database.select().from(budgetEvents).where(inArray(budgetEvents.monthId, monthIds)),
     ]);
 
     return monthRows.map((monthRow) =>
@@ -26,17 +32,21 @@ export class TursoMonthRepository implements MonthRepository {
     );
   }
 
-  async saveAll(months: Month[]): Promise<void> {
+  async saveAll(userId: string, months: Month[]): Promise<void> {
     await this.database.transaction(async (transaction) => {
-      await transaction.delete(budgetEvents);
-      await transaction.delete(budgetMonthCategories);
-      await transaction.delete(budgetMonths);
+      const existingMonthRows = await transaction.select({ id: budgetMonths.id }).from(budgetMonths).where(eq(budgetMonths.userId, userId));
+      const existingMonthIds = existingMonthRows.map((row) => row.id);
+      if (existingMonthIds.length > 0) {
+        await transaction.delete(budgetEvents).where(inArray(budgetEvents.monthId, existingMonthIds));
+        await transaction.delete(budgetMonthCategories).where(inArray(budgetMonthCategories.monthId, existingMonthIds));
+        await transaction.delete(budgetMonths).where(eq(budgetMonths.userId, userId));
+      }
 
       if (months.length === 0) {
         return;
       }
 
-      await transaction.insert(budgetMonths).values(months.map((month) => this.mapper.toMonthRow(month)));
+      await transaction.insert(budgetMonths).values(months.map((month) => this.mapper.toMonthRow(month, userId)));
 
       const categoryRows = months.flatMap((month) => this.mapper.toCategoryRows(month));
       if (categoryRows.length > 0) {

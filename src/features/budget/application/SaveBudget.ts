@@ -8,17 +8,17 @@ export interface BudgetSnapshotToSave {
 }
 
 export interface SaveBudgetUseCase {
-  invoke(snapshot: BudgetSnapshotToSave): Promise<void>;
+  invoke(userId: string, snapshot: BudgetSnapshotToSave): Promise<void>;
 }
 
 export class SaveBudget implements SaveBudgetUseCase {
   constructor(private readonly transactionRunner: BudgetTransactionRunner) {}
 
-  async invoke(snapshot: BudgetSnapshotToSave): Promise<void> {
+  async invoke(userId: string, snapshot: BudgetSnapshotToSave): Promise<void> {
     await this.transactionRunner.runAtomically(async ({ budgetRepository, monthRepository }) => {
-      await budgetRepository.saveBase(snapshot.baseBudget);
-      await budgetRepository.saveFixedExpenseItems(snapshot.fixedExpenseItems);
-      await monthRepository.saveAll(snapshot.months);
+      await budgetRepository.saveBase(userId, snapshot.baseBudget);
+      await budgetRepository.saveFixedExpenseItems(userId, snapshot.fixedExpenseItems);
+      await monthRepository.saveAll(userId, snapshot.months);
     });
   }
 }

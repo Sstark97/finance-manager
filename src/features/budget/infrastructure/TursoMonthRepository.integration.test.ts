@@ -10,6 +10,8 @@ describe("TursoMonthRepository", () => {
   beforeEach(async () => {
     testDatabase = await new TestDatabaseFactory().create();
     repository = new TursoMonthRepository(testDatabase.database);
+    await testDatabase.seedUser("user-1");
+    await testDatabase.seedUser("user-2");
   });
 
   afterEach(async () => {
@@ -17,7 +19,7 @@ describe("TursoMonthRepository", () => {
   });
 
   it("should return an empty list when no month has been saved yet", async () => {
-    const months = await repository.findAll();
+    const months = await repository.findAll("user-1");
 
     expect(months).toEqual([]);
   });
@@ -31,8 +33,8 @@ describe("TursoMonthRepository", () => {
       netIncomeOverride: null,
     };
 
-    await repository.saveAll([june]);
-    const months = await repository.findAll();
+    await repository.saveAll("user-1", [june]);
+    const months = await repository.findAll("user-1");
 
     expect(months).toEqual([june]);
   });
@@ -41,13 +43,13 @@ describe("TursoMonthRepository", () => {
     const july: Month = { id: "july", date: new Date("2026-07-01T00:00:00.000Z"), label: "jul 26", overrides: {}, actual: {}, events: [], netIncomeOverride: null };
     const june: Month = { id: "june", date: new Date("2026-06-01T00:00:00.000Z"), label: "jun 26", overrides: {}, actual: {}, events: [], netIncomeOverride: null };
 
-    await repository.saveAll([july, june]);
-    const months = await repository.findAll();
+    await repository.saveAll("user-1", [july, june]);
+    const months = await repository.findAll("user-1");
 
     expect(months.map((month) => month.id)).toEqual(["june", "july"]);
   });
 
-  it("should replace previously saved months, categories and events when saveAll is called again", async () => {
+  it("should replace previously saved months, categories and events when saveAll is called again for the same user", async () => {
     const june: Month = {
       id: "june", date: new Date("2026-06-01T00:00:00.000Z"), label: "jun 26",
       overrides: { inversion: 225 }, actual: {},
@@ -56,9 +58,9 @@ describe("TursoMonthRepository", () => {
     };
     const july: Month = { id: "july", date: new Date("2026-07-01T00:00:00.000Z"), label: "jul 26", overrides: {}, actual: {}, events: [], netIncomeOverride: null };
 
-    await repository.saveAll([june]);
-    await repository.saveAll([july]);
-    const months = await repository.findAll();
+    await repository.saveAll("user-1", [june]);
+    await repository.saveAll("user-1", [july]);
+    const months = await repository.findAll("user-1");
 
     expect(months).toEqual([july]);
   });
@@ -66,9 +68,36 @@ describe("TursoMonthRepository", () => {
   it("should preserve a net income override of zero without collapsing it to the base income", async () => {
     const june: Month = { id: "june", date: new Date("2026-06-01T00:00:00.000Z"), label: "jun 26", overrides: {}, actual: {}, events: [], netIncomeOverride: 0 };
 
-    await repository.saveAll([june]);
-    const [storedMonth] = await repository.findAll();
+    await repository.saveAll("user-1", [june]);
+    const [storedMonth] = await repository.findAll("user-1");
 
     expect(storedMonth.netIncomeOverride).toBe(0);
+  });
+
+  it("should keep months, categories and events isolated per user", async () => {
+    const firstUserMonth: Month = {
+      id: "june", date: new Date("2026-06-01T00:00:00.000Z"), label: "jun 26",
+      overrides: { inversion: 225 }, actual: {}, events: [{ id: "event-1", name: "Apple Watch", amount: 75, category: "gastosFijos" }],
+      netIncomeOverride: null,
+    };
+    const secondUserMonth: Month = { id: "july", date: new Date("2026-07-01T00:00:00.000Z"), label: "jul 26", overrides: {}, actual: {}, events: [], netIncomeOverride: null };
+
+    await repository.saveAll("user-1", [firstUserMonth]);
+    await repository.saveAll("user-2", [secondUserMonth]);
+
+    expect(await repository.findAll("user-1")).toEqual([firstUserMonth]);
+    expect(await repository.findAll("user-2")).toEqual([secondUserMonth]);
+  });
+
+  it("should not delete another user's months when saving the current user's months", async () => {
+    const firstUserMonth: Month = { id: "june", date: new Date("2026-06-01T00:00:00.000Z"), label: "jun 26", overrides: {}, actual: {}, events: [], netIncomeOverride: null };
+    const secondUserMonth: Month = { id: "july", date: new Date("2026-07-01T00:00:00.000Z"), label: "jul 26", overrides: {}, actual: {}, events: [], netIncomeOverride: null };
+    await repository.saveAll("user-1", [firstUserMonth]);
+    await repository.saveAll("user-2", [secondUserMonth]);
+
+    await repository.saveAll("user-1", []);
+
+    expect(await repository.findAll("user-1")).toEqual([]);
+    expect(await repository.findAll("user-2")).toEqual([secondUserMonth]);
   });
 });

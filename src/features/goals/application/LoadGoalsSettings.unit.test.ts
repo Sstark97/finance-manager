@@ -16,14 +16,14 @@ class FakeGoalsSettingsRepository implements GoalsSettingsRepository {
 }
 
 describe("LoadGoalsSettings", () => {
-  it("should return the settings stored in the repository", async () => {
+  it("should return the settings stored in the repository for the given user", async () => {
     const settings: GoalsSettings = {
       currentSalary: 27000, fiContribution: 293, fiReturn: 0.07, btcSavings: 0,
       btcConditions: { disposable: true, dcaActive: true }, countCar: true,
     };
     const useCase = new LoadGoalsSettings(new FakeGoalsSettingsRepository(settings));
 
-    const result = await useCase.invoke();
+    const result = await useCase.invoke("user-1");
 
     expect(result).toEqual(settings);
   });
@@ -31,7 +31,7 @@ describe("LoadGoalsSettings", () => {
   it("should propagate null when the settings have not been configured yet", async () => {
     const useCase = new LoadGoalsSettings(new FakeGoalsSettingsRepository(null));
 
-    const result = await useCase.invoke();
+    const result = await useCase.invoke("user-1");
 
     expect(result).toBeNull();
   });

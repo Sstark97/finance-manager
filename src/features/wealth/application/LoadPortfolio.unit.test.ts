@@ -4,10 +4,10 @@ import type { PortfolioRepository } from "@/features/wealth/application/Portfoli
 import type { Position } from "@/features/wealth/domain/types";
 
 class FakePortfolioRepository implements PortfolioRepository {
-  constructor(private readonly positions: Position[]) {}
+  constructor(private readonly positionsByUserId: Record<string, Position[]>) {}
 
-  async findAll(): Promise<Position[]> {
-    return this.positions;
+  async findAll(userId: string): Promise<Position[]> {
+    return this.positionsByUserId[userId] ?? [];
   }
 
   async saveAll(): Promise<void> {
@@ -16,12 +16,21 @@ class FakePortfolioRepository implements PortfolioRepository {
 }
 
 describe("LoadPortfolio", () => {
-  it("should return every position stored in the repository", async () => {
+  it("should return every position stored in the repository for the given user", async () => {
     const bitcoin: Position = { id: "btc", name: "Bitcoin", ticker: "BTC-EUR", type: "cripto", units: 0.003441, price: 60848, group: "btc" };
-    const useCase = new LoadPortfolio(new FakePortfolioRepository([bitcoin]));
+    const useCase = new LoadPortfolio(new FakePortfolioRepository({ "user-1": [bitcoin] }));
 
-    const positions = await useCase.invoke();
+    const positions = await useCase.invoke("user-1");
 
     expect(positions).toEqual([bitcoin]);
+  });
+
+  it("should not return positions belonging to a different user", async () => {
+    const bitcoin: Position = { id: "btc", name: "Bitcoin", ticker: "BTC-EUR", type: "cripto", units: 0.003441, price: 60848, group: "btc" };
+    const useCase = new LoadPortfolio(new FakePortfolioRepository({ "user-1": [bitcoin] }));
+
+    const positions = await useCase.invoke("user-2");
+
+    expect(positions).toEqual([]);
   });
 });

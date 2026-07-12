@@ -6,6 +6,9 @@ import { GoalsTab, type GoalsTabProps } from "@/features/goals/components/GoalsT
 import type { GoalsSettings } from "@/features/goals/application/GoalsSettings";
 import type { Debt } from "@/shared/domain/types";
 import { PortfolioCalculator } from "@/features/wealth/domain/PortfolioCalculator";
+import type { WealthTargets } from "@/features/wealth/domain/WealthTargets";
+import { WEALTH_TARGETS_INITIAL } from "@/features/wealth/data/wealthTargets";
+import { currencyFormatter } from "@/lib/CurrencyFormatter";
 
 const portfolioDerived = new PortfolioCalculator().derive([]);
 
@@ -14,21 +17,22 @@ const SAMPLE_SETTINGS: GoalsSettings = {
   btcConditions: { disposable: true, dcaActive: true }, countCar: true,
 };
 
-function renderGoalsTab(overrides: Partial<Pick<GoalsTabProps, "settings" | "debts">> = {}) {
+function renderGoalsTab(overrides: Partial<Pick<GoalsTabProps, "settings" | "debts" | "wealthTargets">> = {}) {
   const setDebts = vi.fn();
   const setSettings = vi.fn();
 
-  render(
+  const view = render(
     <GoalsTab
       portfolioDerived={portfolioDerived}
       debts={overrides.debts ?? []}
       setDebts={setDebts}
       settings={overrides.settings ?? null}
       setSettings={setSettings}
+      wealthTargets={overrides.wealthTargets ?? null}
     />,
   );
 
-  return { setDebts, setSettings };
+  return { setDebts, setSettings, container: view.container };
 }
 
 describe("GoalsTab", () => {
@@ -87,5 +91,19 @@ describe("GoalsTab", () => {
 
     expect(screen.queryByText("Aún no has añadido deudas.")).not.toBeInTheDocument();
     expect(screen.getByText("Coche")).toBeInTheDocument();
+  });
+
+  it("should fall back to the default wealth targets for the emergency fund card when none are configured", () => {
+    const { container } = renderGoalsTab({ settings: SAMPLE_SETTINGS, wealthTargets: null });
+
+    expect(container.textContent).toContain(`Objetivo 6 meses de gastos (${currencyFormatter.euro(WEALTH_TARGETS_INITIAL.emergencyFund)})`);
+  });
+
+  it("should read the configured emergency fund target instead of the default when one is provided", () => {
+    const wealthTargets: WealthTargets = { ...WEALTH_TARGETS_INITIAL, emergencyFund: 9000 };
+
+    const { container } = renderGoalsTab({ settings: SAMPLE_SETTINGS, wealthTargets });
+
+    expect(container.textContent).toContain(`Objetivo 6 meses de gastos (${currencyFormatter.euro(9000)})`);
   });
 });

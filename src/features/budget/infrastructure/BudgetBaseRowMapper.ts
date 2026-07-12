@@ -1,8 +1,6 @@
 import type { Budget } from "@/features/budget/domain/types";
 import type { budgetBase } from "@/infrastructure/db/schema";
 
-export const BUDGET_BASE_SINGLETON_ID = "default";
-
 type BudgetBaseRow = typeof budgetBase.$inferSelect;
 type NewBudgetBaseRow = typeof budgetBase.$inferInsert;
 
@@ -18,9 +16,9 @@ export class BudgetBaseRowMapper {
     };
   }
 
-  toRow(budget: Budget): NewBudgetBaseRow {
+  toRow(budget: Budget, userId: string): NewBudgetBaseRow {
     return {
-      id: BUDGET_BASE_SINGLETON_ID,
+      userId,
       ingresoNeto: budget.ingresoNeto,
       gastosFijos: budget.gastosFijos,
       inversion: budget.inversion,

@@ -41,9 +41,10 @@ export class MonthRowMapper {
     };
   }
 
-  toMonthRow(month: Month): NewMonthRow {
+  toMonthRow(month: Month, userId: string): NewMonthRow {
     return {
       id: month.id,
+      userId,
       date: month.date.getTime(),
       label: month.label,
       netIncomeOverride: month.netIncomeOverride,

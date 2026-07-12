@@ -6,7 +6,7 @@ describe("DebtRowMapper", () => {
   const mapper = new DebtRowMapper();
 
   it("should map a row with a deadline into a domain debt with that deadline", () => {
-    const row = { id: "applewatch", name: "Apple Watch", installment: 75, balance: 105, note: "Liquidar antes de julio", deadline: "2026-07-10" };
+    const row = { id: "applewatch", userId: "user-1", name: "Apple Watch", installment: 75, balance: 105, note: "Liquidar antes de julio", deadline: "2026-07-10" };
 
     const debt = mapper.toDomain(row);
 
@@ -14,25 +14,26 @@ describe("DebtRowMapper", () => {
   });
 
   it("should map a row without a deadline into a domain debt with an undefined deadline", () => {
-    const row = { id: "kindle", name: "Kindle", installment: 44, balance: 132, note: "Liquida en septiembre", deadline: null };
+    const row = { id: "kindle", userId: "user-1", name: "Kindle", installment: 44, balance: 132, note: "Liquida en septiembre", deadline: null };
 
     const debt = mapper.toDomain(row);
 
     expect(debt.deadline).toBeUndefined();
   });
 
-  it("should map a domain debt with a deadline back into a row keeping that deadline", () => {
+  it("should map a domain debt with a deadline back into a row keeping that deadline and the owning user", () => {
     const debt: Debt = { id: "applewatch", name: "Apple Watch", installment: 75, balance: 105, note: "Liquidar antes de julio", deadline: "2026-07-10" };
 
-    const row = mapper.toRow(debt);
+    const row = mapper.toRow(debt, "user-1");
 
     expect(row.deadline).toBe("2026-07-10");
+    expect(row.userId).toBe("user-1");
   });
 
   it("should map a domain debt without a deadline back into a row with a null deadline", () => {
     const debt: Debt = { id: "kindle", name: "Kindle", installment: 44, balance: 132, note: "Liquida en septiembre" };
 
-    const row = mapper.toRow(debt);
+    const row = mapper.toRow(debt, "user-1");
 
     expect(row.deadline).toBeNull();
   });

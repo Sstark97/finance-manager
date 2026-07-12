@@ -20,11 +20,12 @@ describe("TursoBudgetTransactionRunner", () => {
     runner = new TursoBudgetTransactionRunner(testDatabase.database);
     readBudgetRepository = new TursoBudgetRepository(testDatabase.database);
     readMonthRepository = new TursoMonthRepository(testDatabase.database);
+    await testDatabase.seedUser("user-1");
 
     await runner.runAtomically(async ({ budgetRepository, monthRepository }) => {
-      await budgetRepository.saveBase(initialBudget);
-      await budgetRepository.saveFixedExpenseItems(initialItems);
-      await monthRepository.saveAll(initialMonths);
+      await budgetRepository.saveBase("user-1", initialBudget);
+      await budgetRepository.saveFixedExpenseItems("user-1", initialItems);
+      await monthRepository.saveAll("user-1", initialMonths);
     });
   });
 
@@ -37,12 +38,12 @@ describe("TursoBudgetTransactionRunner", () => {
     const revisedMonths: Month[] = [{ ...initialMonths[0], netIncomeOverride: 1800 }];
 
     await runner.runAtomically(async ({ budgetRepository, monthRepository }) => {
-      await budgetRepository.saveBase(revisedBudget);
-      await monthRepository.saveAll(revisedMonths);
+      await budgetRepository.saveBase("user-1", revisedBudget);
+      await monthRepository.saveAll("user-1", revisedMonths);
     });
 
-    expect(await readBudgetRepository.findBase()).toEqual(revisedBudget);
-    expect(await readMonthRepository.findAll()).toEqual(revisedMonths);
+    expect(await readBudgetRepository.findBase("user-1")).toEqual(revisedBudget);
+    expect(await readMonthRepository.findAll("user-1")).toEqual(revisedMonths);
   });
 
   it("should roll back every write made inside the callback when a later step throws", async () => {
@@ -50,13 +51,13 @@ describe("TursoBudgetTransactionRunner", () => {
 
     await expect(
       runner.runAtomically(async ({ budgetRepository, monthRepository }) => {
-        await budgetRepository.saveBase(revisedBudget);
-        await monthRepository.saveAll([]);
+        await budgetRepository.saveBase("user-1", revisedBudget);
+        await monthRepository.saveAll("user-1", []);
         throw new Error("simulated failure after two of three writes succeeded");
       }),
     ).rejects.toThrow("simulated failure");
 
-    expect(await readBudgetRepository.findBase()).toEqual(initialBudget);
-    expect(await readMonthRepository.findAll()).toEqual(initialMonths);
+    expect(await readBudgetRepository.findBase("user-1")).toEqual(initialBudget);
+    expect(await readMonthRepository.findAll("user-1")).toEqual(initialMonths);
   });
 });

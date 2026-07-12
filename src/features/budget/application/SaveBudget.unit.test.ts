@@ -6,6 +6,7 @@ import type { BudgetTransactionRunner, BudgetTransactionalRepositories } from "@
 import type { Budget, FixedExpenseItem, Month } from "@/features/budget/domain/types";
 
 class RecordingBudgetRepository implements BudgetRepository {
+  savedUserId: string | null = null;
   savedBase: Budget | null = null;
   savedItems: FixedExpenseItem[] | null = null;
 
@@ -13,7 +14,8 @@ class RecordingBudgetRepository implements BudgetRepository {
     throw new Error("not used in this test");
   }
 
-  async saveBase(budget: Budget): Promise<void> {
+  async saveBase(userId: string, budget: Budget): Promise<void> {
+    this.savedUserId = userId;
     this.savedBase = budget;
   }
 
@@ -21,19 +23,21 @@ class RecordingBudgetRepository implements BudgetRepository {
     throw new Error("not used in this test");
   }
 
-  async saveFixedExpenseItems(items: FixedExpenseItem[]): Promise<void> {
+  async saveFixedExpenseItems(_userId: string, items: FixedExpenseItem[]): Promise<void> {
     this.savedItems = items;
   }
 }
 
 class RecordingMonthRepository implements MonthRepository {
+  savedUserId: string | null = null;
   savedMonths: Month[] | null = null;
 
   async findAll(): Promise<Month[]> {
     throw new Error("not used in this test");
   }
 
-  async saveAll(months: Month[]): Promise<void> {
+  async saveAll(userId: string, months: Month[]): Promise<void> {
+    this.savedUserId = userId;
     this.savedMonths = months;
   }
 }
@@ -47,7 +51,7 @@ class StubBudgetTransactionRunner implements BudgetTransactionRunner {
 }
 
 describe("SaveBudget", () => {
-  it("should persist the base budget, fixed expense items and months through their repositories", async () => {
+  it("should persist the base budget, fixed expense items and months for the given user through their repositories", async () => {
     const budgetRepository = new RecordingBudgetRepository();
     const monthRepository = new RecordingMonthRepository();
     const useCase = new SaveBudget(new StubBudgetTransactionRunner({ budgetRepository, monthRepository }));
@@ -55,10 +59,12 @@ describe("SaveBudget", () => {
     const fixedExpenseItems: FixedExpenseItem[] = [{ id: "coche", name: "Coche", amount: 173.28 }];
     const months: Month[] = [{ id: "month-1", date: new Date("2026-06-01"), label: "jun 26", overrides: {}, actual: {}, events: [], netIncomeOverride: null }];
 
-    await useCase.invoke({ baseBudget, fixedExpenseItems, months });
+    await useCase.invoke("user-1", { baseBudget, fixedExpenseItems, months });
 
+    expect(budgetRepository.savedUserId).toBe("user-1");
     expect(budgetRepository.savedBase).toEqual(baseBudget);
     expect(budgetRepository.savedItems).toEqual(fixedExpenseItems);
+    expect(monthRepository.savedUserId).toBe("user-1");
     expect(monthRepository.savedMonths).toEqual(months);
   });
 });
