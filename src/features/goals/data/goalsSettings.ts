@@ -6,5 +6,4 @@ export const GOALS_SETTINGS_INITIAL: GoalsSettings = {
   fiReturn: 0.07,
   btcSavings: 0,
   btcConditions: { disposable: true, dcaActive: true },
-  countCar: true,
 };

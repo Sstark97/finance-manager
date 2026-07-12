@@ -16,13 +16,11 @@ export function GoalsSettingsOnboarding({ onCreateSettings }: GoalsSettingsOnboa
   const [btcSavings, setBtcSavings] = useState<number>(0);
   const [disposable, setDisposable] = useState<boolean>(false);
   const [dcaActive, setDcaActive] = useState<boolean>(false);
-  const [countCar, setCountCar] = useState<boolean>(false);
 
   const createSettings = (): void => {
     onCreateSettings({
       currentSalary, fiContribution, fiReturn, btcSavings,
       btcConditions: { disposable, dcaActive },
-      countCar,
     });
   };
 
@@ -58,11 +56,8 @@ export function GoalsSettingsOnboarding({ onCreateSettings }: GoalsSettingsOnboa
         <label style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8, fontSize:12.5, color:palette.sub }}>
           <input type="checkbox" checked={disposable} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>setDisposable(event.target.checked)} /> Dinero prescindible para Bitcoin (no del fondo de emergencia)
         </label>
-        <label style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8, fontSize:12.5, color:palette.sub }}>
-          <input type="checkbox" checked={dcaActive} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>setDcaActive(event.target.checked)} /> El DCA mensual no se pausa
-        </label>
         <label style={{ display:"flex", alignItems:"center", gap:8, marginBottom:18, fontSize:12.5, color:palette.sub }}>
-          <input type="checkbox" checked={countCar} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>setCountCar(event.target.checked)} /> Contar el coche como activo (neutraliza su deuda)
+          <input type="checkbox" checked={dcaActive} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>setDcaActive(event.target.checked)} /> El DCA mensual no se pausa
         </label>
 
         <div style={{ display:"flex", justifyContent:"flex-end", paddingTop:16, borderTop:`1px solid ${palette.line}` }}>

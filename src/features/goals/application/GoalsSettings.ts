@@ -6,5 +6,4 @@ export interface GoalsSettings {
   fiReturn: number;
   btcSavings: number;
   btcConditions: BtcConditions;
-  countCar: boolean;
 }

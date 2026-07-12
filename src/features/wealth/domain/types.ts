@@ -1,5 +1,6 @@
 export type PositionType = "fondo" | "etf" | "cripto" | "efectivo";
 export type PositionGroup = "rv" | "btc" | "liquidez";
+export type EquityIndexKey = "world" | "em" | "nasdaq";
 
 export interface Position {
   id: string;
@@ -9,6 +10,7 @@ export interface Position {
   units: number;
   price: number;
   group: PositionGroup;
+  equityIndex: EquityIndexKey | null;
 }
 
 export interface PortfolioHistoryPoint {

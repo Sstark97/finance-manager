@@ -39,8 +39,8 @@ const now = Date.now();
 const currentMonthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
 
 await client.execute({
-  sql: "insert into positions (id, user_id, name, ticker, type, units, group_name, last_price, updated_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-  args: ["e2e-position-btc", E2E_TEST_USER.id, "Bitcoin", "BTC-EUR", "cripto", 0.05, "btc", 60000, now],
+  sql: "insert into positions (id, user_id, name, ticker, type, units, group_name, last_price, equity_index, updated_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+  args: ["e2e-position-btc", E2E_TEST_USER.id, "Bitcoin", "BTC-EUR", "cripto", 0.05, "btc", 60000, null, now],
 });
 
 await client.execute({
@@ -64,8 +64,8 @@ await client.execute({
 });
 
 await client.execute({
-  sql: "insert into goals_settings (user_id, current_salary, fi_contribution, fi_return, btc_savings, btc_disposable, btc_dca_active, count_car) values (?, ?, ?, ?, ?, ?, ?, ?)",
-  args: [E2E_TEST_USER.id, 27000, 293, 0.07, 0, 1, 1, 1],
+  sql: "insert into goals_settings (user_id, current_salary, fi_contribution, fi_return, btc_savings, btc_disposable, btc_dca_active) values (?, ?, ?, ?, ?, ?, ?)",
+  args: [E2E_TEST_USER.id, 27000, 293, 0.07, 0, 1, 1],
 });
 
 await client.execute({

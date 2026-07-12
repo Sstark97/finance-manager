@@ -18,19 +18,19 @@ class FakeAssetPriceGateway implements AssetPriceGateway {
 describe("RefreshPositionPrices", () => {
   const worldFund: Position = {
     id: "world", name: "Fidelity MSCI World", ticker: "0P0000KSPA.F",
-    type: "fondo", units: 10, price: 20, group: "rv",
+    type: "fondo", units: 10, price: 20, group: "rv", equityIndex: "world",
   };
   const nasdaqEtf: Position = {
     id: "nasdaq", name: "iShares Nasdaq 100", ticker: "CNDX.L",
-    type: "etf", units: 2, price: 1024.86, group: "rv",
+    type: "etf", units: 2, price: 1024.86, group: "rv", equityIndex: "nasdaq",
   };
   const bitcoin: Position = {
     id: "btc", name: "Bitcoin", ticker: "BTC-EUR",
-    type: "cripto", units: 0.01, price: 50000, group: "btc",
+    type: "cripto", units: 0.01, price: 50000, group: "btc", equityIndex: null,
   };
   const cash: Position = {
     id: "liquidez", name: "Fondo emergencia", ticker: "",
-    type: "efectivo", units: 300, price: 1, group: "liquidez",
+    type: "efectivo", units: 300, price: 1, group: "liquidez", equityIndex: null,
   };
 
   it("should merge fresh prices into the matching positions", async () => {

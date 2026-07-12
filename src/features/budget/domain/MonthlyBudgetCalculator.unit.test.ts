@@ -32,7 +32,7 @@ describe("MonthlyBudgetCalculator", () => {
     expect(result.values.ocio).toBe(base.ocio);
   });
 
-  it("should add up events that belong to a category on top of its target", () => {
+  it("should keep values reflecting only the plan, unaffected by events", () => {
     const month = buildMonth({
       events: [
         { id: "e1", name: "Regalo", amount: 40, category: "ocio" },
@@ -42,7 +42,47 @@ describe("MonthlyBudgetCalculator", () => {
 
     const result = new MonthlyBudgetCalculator().calculate(month, base);
 
-    expect(result.values.ocio).toBe(base.ocio + 40 + 15);
+    expect(result.values.ocio).toBe(base.ocio);
+  });
+
+  it("should add events on top of the plan into realized when there is no manual actual", () => {
+    const month = buildMonth({
+      events: [
+        { id: "e1", name: "Regalo", amount: 40, category: "ocio" },
+        { id: "e2", name: "Cine", amount: 15, category: "ocio" },
+      ],
+    });
+
+    const result = new MonthlyBudgetCalculator().calculate(month, base);
+
+    expect(result.realized.ocio).toBe(base.ocio + 40 + 15);
+  });
+
+  it("should leave realized as null for a category with no manual actual and no events", () => {
+    const month = buildMonth();
+
+    const result = new MonthlyBudgetCalculator().calculate(month, base);
+
+    expect(result.realized.ocio).toBeNull();
+  });
+
+  it("should combine the manual actual with events into realized", () => {
+    const month = buildMonth({
+      actual: { ocio: 250 },
+      events: [{ id: "e1", name: "Cine", amount: 15, category: "ocio" }],
+    });
+
+    const result = new MonthlyBudgetCalculator().calculate(month, base);
+
+    expect(result.realized.ocio).toBe(250 + 15);
+  });
+
+  it("should use the manual actual alone for realized when there are no events", () => {
+    const month = buildMonth({ actual: { ocio: 250 } });
+
+    const result = new MonthlyBudgetCalculator().calculate(month, base);
+
+    expect(result.realized.ocio).toBe(250);
   });
 
   it("should add netIncomeOverride and ingreso events into the income for the month", () => {
@@ -66,7 +106,7 @@ describe("MonthlyBudgetCalculator", () => {
     expect(result.surplus).toBe(base.ingresoNeto - expectedTotalBudgeted);
   });
 
-  it("should use the actual value for totalActual when a category has been registered", () => {
+  it("should use the realized value for totalActual when a category has been registered", () => {
     const month = buildMonth({ actual: { ocio: 250 } });
 
     const result = new MonthlyBudgetCalculator().calculate(month, base);
@@ -75,7 +115,7 @@ describe("MonthlyBudgetCalculator", () => {
     expect(result.totalActual).toBe(totalWithoutOcio + 250);
   });
 
-  it("should fall back to the budgeted value for totalActual when actual is null", () => {
+  it("should fall back to the budgeted value for totalActual when realized is null", () => {
     const month = buildMonth({ actual: { ocio: null } });
 
     const result = new MonthlyBudgetCalculator().calculate(month, base);

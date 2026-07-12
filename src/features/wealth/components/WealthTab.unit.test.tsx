@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import React from "react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { WealthTab } from "@/features/wealth/components/WealthTab";
 import { PortfolioCalculator } from "@/features/wealth/domain/PortfolioCalculator";
 import type { Position } from "@/features/wealth/domain/types";
@@ -47,7 +48,7 @@ describe("WealthTab", () => {
   });
 
   it("should not show the empty-portfolio invitation once a position exists", () => {
-    const position: Position = { id: "efectivo-1", name: "Cuenta", ticker: "", type: "efectivo", units: 500, price: 1, group: "liquidez" };
+    const position: Position = { id: "efectivo-1", name: "Cuenta", ticker: "", type: "efectivo", units: 500, price: 1, group: "liquidez", equityIndex: null };
 
     renderWealthTab([position]);
 
@@ -81,5 +82,38 @@ describe("WealthTab", () => {
     const { container } = renderWealthTab([], { ...WEALTH_TARGETS_INITIAL, emergencyFund: 9000 });
 
     expect(container.textContent).toContain(`/ ${currencyFormatter.euro(9000)}`);
+  });
+
+  it("should stop showing the World real-vs-target bar as dimmed and at 0% once a fund tracking that index exists", () => {
+    const worldFund: Position = { id: "random-fund-id", name: "Fidelity MSCI World", ticker: "0P0000KSPA.F", type: "fondo", units: 10, price: 20, group: "rv", equityIndex: "world" };
+
+    renderWealthTab([worldFund]);
+
+    const equityTargetsCard = screen.getByText(/Renta variable/).closest(".card") as HTMLElement;
+    const equityTargetsSection = within(equityTargetsCard);
+    expect(equityTargetsSection.getByText("100.0%")).toBeInTheDocument();
+    const worldBarRow = equityTargetsSection.getByText("World").closest("div")!.parentElement as HTMLElement;
+    expect(worldBarRow).toHaveStyle({ opacity: "1" });
+  });
+
+  it("should show an index selector for fondo and etf positions in the portfolio editor", async () => {
+    const worldFund: Position = { id: "random-fund-id", name: "Fidelity MSCI World", ticker: "0P0000KSPA.F", type: "fondo", units: 10, price: 20, group: "rv", equityIndex: "world" };
+    const user = userEvent.setup();
+
+    renderWealthTab([worldFund]);
+    await user.click(screen.getByRole("button", { name: "Editar cartera" }));
+
+    const indexSelect = screen.getByRole("combobox", { name: "Índice" });
+    expect(indexSelect).toHaveValue("world");
+  });
+
+  it("should not show an index selector for cripto or efectivo positions in the portfolio editor", async () => {
+    const bitcoin: Position = { id: "btc", name: "Bitcoin", ticker: "BTC-EUR", type: "cripto", units: 0.01, price: 50000, group: "btc", equityIndex: null };
+    const user = userEvent.setup();
+
+    renderWealthTab([bitcoin]);
+    await user.click(screen.getByRole("button", { name: "Editar cartera" }));
+
+    expect(screen.queryByRole("combobox", { name: "Índice" })).not.toBeInTheDocument();
   });
 });

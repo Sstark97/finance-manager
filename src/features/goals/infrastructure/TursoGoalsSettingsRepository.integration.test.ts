@@ -25,7 +25,7 @@ describe("TursoGoalsSettingsRepository", () => {
   it("should round-trip the goals settings through save and find", async () => {
     const settings: GoalsSettings = {
       currentSalary: 27000, fiContribution: 293, fiReturn: 0.07, btcSavings: 0,
-      btcConditions: { disposable: true, dcaActive: true }, countCar: true,
+      btcConditions: { disposable: true, dcaActive: true },
     };
 
     await repository.save("user-1", settings);
@@ -37,7 +37,7 @@ describe("TursoGoalsSettingsRepository", () => {
   it("should overwrite the existing goals settings on a second save call for the same user", async () => {
     const initialSettings: GoalsSettings = {
       currentSalary: 27000, fiContribution: 293, fiReturn: 0.07, btcSavings: 0,
-      btcConditions: { disposable: true, dcaActive: true }, countCar: true,
+      btcConditions: { disposable: true, dcaActive: true },
     };
     const revisedSettings: GoalsSettings = { ...initialSettings, currentSalary: 30000, btcConditions: { disposable: false, dcaActive: false } };
 
@@ -51,11 +51,11 @@ describe("TursoGoalsSettingsRepository", () => {
   it("should keep goals settings isolated per user", async () => {
     const firstUserSettings: GoalsSettings = {
       currentSalary: 27000, fiContribution: 293, fiReturn: 0.07, btcSavings: 0,
-      btcConditions: { disposable: true, dcaActive: true }, countCar: true,
+      btcConditions: { disposable: true, dcaActive: true },
     };
     const secondUserSettings: GoalsSettings = {
       currentSalary: 40000, fiContribution: 500, fiReturn: 0.05, btcSavings: 100,
-      btcConditions: { disposable: false, dcaActive: false }, countCar: false,
+      btcConditions: { disposable: false, dcaActive: false },
     };
 
     await repository.save("user-1", firstUserSettings);

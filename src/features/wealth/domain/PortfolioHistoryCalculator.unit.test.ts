@@ -8,15 +8,15 @@ function dayEpochSecondsFor(year: number, month: number, day: number): number {
 }
 
 function etfPosition(overrides: Partial<Position> = {}): Position {
-  return { id: "nasdaq", name: "iShares Nasdaq 100", ticker: "CNDX.L", type: "etf", units: 2, price: 1000, group: "rv", ...overrides };
+  return { id: "nasdaq", name: "iShares Nasdaq 100", ticker: "CNDX.L", type: "etf", units: 2, price: 1000, group: "rv", equityIndex: "nasdaq", ...overrides };
 }
 
 function cryptoPosition(overrides: Partial<Position> = {}): Position {
-  return { id: "btc", name: "Bitcoin", ticker: "BTC-EUR", type: "cripto", units: 1, price: 100, group: "btc", ...overrides };
+  return { id: "btc", name: "Bitcoin", ticker: "BTC-EUR", type: "cripto", units: 1, price: 100, group: "btc", equityIndex: null, ...overrides };
 }
 
 function cashPosition(units: number): Position {
-  return { id: "liquidez", name: "Fondo emergencia", ticker: "", type: "efectivo", units, price: 1, group: "liquidez" };
+  return { id: "liquidez", name: "Fondo emergencia", ticker: "", type: "efectivo", units, price: 1, group: "liquidez", equityIndex: null };
 }
 
 describe("PortfolioHistoryCalculator", () => {
@@ -134,7 +134,7 @@ describe("PortfolioHistoryCalculator", () => {
   });
 
   it("should hold a fund's single-point history flat across the whole axis", () => {
-    const worldFund = { id: "world", name: "Fidelity MSCI World", ticker: "0P0001CLDK.F", type: "fondo" as const, units: 30, price: 14, group: "rv" as const };
+    const worldFund = { id: "world", name: "Fidelity MSCI World", ticker: "0P0001CLDK.F", type: "fondo" as const, units: 30, price: 14, group: "rv" as const, equityIndex: "world" as const };
     const bitcoin = cryptoPosition({ units: 1 });
     const fundCurrentPrice = 14;
     const btcCloseOnDay1 = 100;

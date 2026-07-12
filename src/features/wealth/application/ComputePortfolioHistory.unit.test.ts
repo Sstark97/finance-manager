@@ -21,9 +21,9 @@ class FakeAssetPriceHistoryGateway implements AssetPriceHistoryGateway {
 const day1 = Date.UTC(2026, 6, 1, 0, 0, 0) / 1000;
 const day2 = Date.UTC(2026, 6, 2, 0, 0, 0) / 1000;
 
-const nasdaqEtf: Position = { id: "nasdaq", name: "iShares Nasdaq 100", ticker: "CNDX.L", type: "etf", units: 2, price: 1000, group: "rv" };
-const bitcoin: Position = { id: "btc", name: "Bitcoin", ticker: "BTC-EUR", type: "cripto", units: 1, price: 100, group: "btc" };
-const cash: Position = { id: "liquidez", name: "Fondo emergencia", ticker: "", type: "efectivo", units: 300, price: 1, group: "liquidez" };
+const nasdaqEtf: Position = { id: "nasdaq", name: "iShares Nasdaq 100", ticker: "CNDX.L", type: "etf", units: 2, price: 1000, group: "rv", equityIndex: "nasdaq" };
+const bitcoin: Position = { id: "btc", name: "Bitcoin", ticker: "BTC-EUR", type: "cripto", units: 1, price: 100, group: "btc", equityIndex: null };
+const cash: Position = { id: "liquidez", name: "Fondo emergencia", ticker: "", type: "efectivo", units: 300, price: 1, group: "liquidez", equityIndex: null };
 
 describe("ComputePortfolioHistory", () => {
   it("should request histories for the priceable tickers at the requested range", async () => {

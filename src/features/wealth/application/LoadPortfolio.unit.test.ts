@@ -17,7 +17,7 @@ class FakePortfolioRepository implements PortfolioRepository {
 
 describe("LoadPortfolio", () => {
   it("should return every position stored in the repository for the given user", async () => {
-    const bitcoin: Position = { id: "btc", name: "Bitcoin", ticker: "BTC-EUR", type: "cripto", units: 0.003441, price: 60848, group: "btc" };
+    const bitcoin: Position = { id: "btc", name: "Bitcoin", ticker: "BTC-EUR", type: "cripto", units: 0.003441, price: 60848, group: "btc", equityIndex: null };
     const useCase = new LoadPortfolio(new FakePortfolioRepository({ "user-1": [bitcoin] }));
 
     const positions = await useCase.invoke("user-1");
@@ -26,7 +26,7 @@ describe("LoadPortfolio", () => {
   });
 
   it("should not return positions belonging to a different user", async () => {
-    const bitcoin: Position = { id: "btc", name: "Bitcoin", ticker: "BTC-EUR", type: "cripto", units: 0.003441, price: 60848, group: "btc" };
+    const bitcoin: Position = { id: "btc", name: "Bitcoin", ticker: "BTC-EUR", type: "cripto", units: 0.003441, price: 60848, group: "btc", equityIndex: null };
     const useCase = new LoadPortfolio(new FakePortfolioRepository({ "user-1": [bitcoin] }));
 
     const positions = await useCase.invoke("user-2");

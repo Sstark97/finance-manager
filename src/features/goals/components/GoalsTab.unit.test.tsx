@@ -14,7 +14,7 @@ const portfolioDerived = new PortfolioCalculator().derive([]);
 
 const SAMPLE_SETTINGS: GoalsSettings = {
   currentSalary: 27000, fiContribution: 293, fiReturn: 0.07, btcSavings: 0,
-  btcConditions: { disposable: true, dcaActive: true }, countCar: true,
+  btcConditions: { disposable: true, dcaActive: true },
 };
 
 function renderGoalsTab(overrides: Partial<Pick<GoalsTabProps, "settings" | "debts" | "wealthTargets">> = {}) {
@@ -57,7 +57,7 @@ describe("GoalsTab", () => {
     expect(setSettings).toHaveBeenCalledTimes(1);
     expect(setSettings).toHaveBeenCalledWith({
       currentSalary: 0, fiContribution: 0, fiReturn: 0, btcSavings: 0,
-      btcConditions: { disposable: false, dcaActive: false }, countCar: false,
+      btcConditions: { disposable: false, dcaActive: false },
     });
   });
 
@@ -90,7 +90,41 @@ describe("GoalsTab", () => {
     renderGoalsTab({ settings: SAMPLE_SETTINGS, debts: [debt] });
 
     expect(screen.queryByText("Aún no has añadido deudas.")).not.toBeInTheDocument();
-    expect(screen.getByText("Coche")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Coche")).toBeInTheDocument();
+  });
+
+  it("should call setDebts with the new name when the debt name input is edited", () => {
+    const debt: Debt = { id: "coche", name: "Coche", installment: 173.28, balance: 8000, note: "En curso" };
+    const { setDebts } = renderGoalsTab({ settings: SAMPLE_SETTINGS, debts: [debt] });
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Nombre" }), { target: { value: "Préstamo coche" } });
+
+    const updater = setDebts.mock.calls[0][0] as (debts: Debt[]) => Debt[];
+    expect(updater([debt])[0].name).toBe("Préstamo coche");
+  });
+
+  it("should filter out the debt when the Eliminar button is pressed", () => {
+    const debt: Debt = { id: "coche", name: "Coche", installment: 173.28, balance: 8000, note: "En curso" };
+    const { setDebts } = renderGoalsTab({ settings: SAMPLE_SETTINGS, debts: [debt] });
+
+    fireEvent.click(screen.getByRole("button", { name: "Eliminar" }));
+
+    const updater = setDebts.mock.calls[0][0] as (debts: Debt[]) => Debt[];
+    expect(updater([debt])).toEqual([]);
+  });
+
+  it("should not show a checkbox to count the car as an asset, since that concept no longer exists", () => {
+    renderGoalsTab({ settings: SAMPLE_SETTINGS, debts: [] });
+
+    expect(screen.queryByText(/Contar el coche como activo/)).not.toBeInTheDocument();
+  });
+
+  it("should not show the hardcoded Apple Watch banner", () => {
+    const debt: Debt = { id: "applewatch", name: "Apple Watch", installment: 50, balance: 200, note: "", deadline: "2026-07-10" };
+
+    renderGoalsTab({ settings: SAMPLE_SETTINGS, debts: [debt] });
+
+    expect(screen.queryByText(/Liquidar Apple Watch/)).not.toBeInTheDocument();
   });
 
   it("should fall back to the default wealth targets for the emergency fund card when none are configured", () => {

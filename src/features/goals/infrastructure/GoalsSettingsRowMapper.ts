@@ -15,7 +15,6 @@ export class GoalsSettingsRowMapper {
         disposable: row.btcDisposable === 1,
         dcaActive: row.btcDcaActive === 1,
       },
-      countCar: row.countCar === 1,
     };
   }
 
@@ -28,7 +27,6 @@ export class GoalsSettingsRowMapper {
       btcSavings: settings.btcSavings,
       btcDisposable: settings.btcConditions.disposable ? 1 : 0,
       btcDcaActive: settings.btcConditions.dcaActive ? 1 : 0,
-      countCar: settings.countCar ? 1 : 0,
     };
   }
 }

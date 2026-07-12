@@ -21,7 +21,7 @@ describe("SavePortfolio", () => {
   it("should persist the given positions for the given user through the repository", async () => {
     const repository = new RecordingPortfolioRepository();
     const useCase = new SavePortfolio(repository);
-    const cash: Position = { id: "liquidez", name: "Fondo emergencia", ticker: "", type: "efectivo", units: 489.93, price: 1, group: "liquidez" };
+    const cash: Position = { id: "liquidez", name: "Fondo emergencia", ticker: "", type: "efectivo", units: 489.93, price: 1, group: "liquidez", equityIndex: null };
 
     await useCase.invoke("user-1", [cash]);
 

@@ -7,18 +7,20 @@ export interface MonthlyBudgetResult {
   totalBudgeted: number;
   surplus: number;
   actual: Record<CategoryId, number | null>;
+  realized: Record<CategoryId, number | null>;
   totalActual: number;
 }
 
 export class MonthlyBudgetCalculator {
   calculate(month: Month, base: Budget): MonthlyBudgetResult {
     const values = {} as Record<CategoryId, number>;
+    const categoryEventsById = {} as Record<CategoryId, number>;
     CATEGORIES.forEach(category => {
       const baseTarget = month.overrides?.[category.id] ?? base[category.id];
-      const categoryEventsAmount = (month.events || [])
+      categoryEventsById[category.id] = (month.events || [])
         .filter(event => event.category === category.id)
         .reduce((sum, event) => sum + (event.amount || 0), 0);
-      values[category.id] = baseTarget + categoryEventsAmount;
+      values[category.id] = baseTarget;
     });
     const incomeEvents = (month.events || [])
       .filter(event => event.category === "ingreso")
@@ -27,15 +29,19 @@ export class MonthlyBudgetCalculator {
     const totalBudgeted = CATEGORIES.reduce((sum, category) => sum + values[category.id], 0);
     const surplus = income - totalBudgeted;
     const actual = {} as Record<CategoryId, number | null>;
+    const realized = {} as Record<CategoryId, number | null>;
     CATEGORIES.forEach(category => {
-      const actualValue = month.actual ? month.actual[category.id] : undefined;
-      actual[category.id] = actualValue != null ? actualValue : null;
+      const manualActual = month.actual ? month.actual[category.id] : undefined;
+      actual[category.id] = manualActual != null ? manualActual : null;
+      const categoryEvents = categoryEventsById[category.id];
+      const isRegistered = actual[category.id] != null || categoryEvents > 0;
+      realized[category.id] = isRegistered ? (actual[category.id] ?? values[category.id]) + categoryEvents : null;
     });
     const totalActual = CATEGORIES.reduce((sum, category) => {
-      const actualValue = actual[category.id];
-      return sum + (actualValue != null ? actualValue : values[category.id]);
+      const realizedValue = realized[category.id];
+      return sum + (realizedValue != null ? realizedValue : values[category.id]);
     }, 0);
-    return { values, income, totalBudgeted, surplus, actual, totalActual };
+    return { values, income, totalBudgeted, surplus, actual, realized, totalActual };
   }
 }
 

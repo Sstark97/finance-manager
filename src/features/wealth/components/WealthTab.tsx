@@ -8,7 +8,7 @@ import {
 import { palette, seriesColorAt } from "@/lib/theme";
 import { currencyFormatter } from "@/lib/CurrencyFormatter";
 import { idGenerator } from "@/lib/IdGenerator";
-import type { Position, PortfolioHistoryPoint, PositionType, CompositionItem } from "@/features/wealth/domain/types";
+import type { Position, PortfolioHistoryPoint, PositionType, CompositionItem, EquityIndexKey } from "@/features/wealth/domain/types";
 import { COMPOSITIONS } from "@/features/wealth/domain/config";
 import type { WealthTargets } from "@/features/wealth/domain/WealthTargets";
 import type { PortfolioDerived } from "@/features/wealth/domain/PortfolioCalculator";
@@ -37,6 +37,9 @@ export interface WealthTabProps {
 
 type EditablePositionField = "name" | "type" | "ticker" | "units" | "price";
 
+const EQUITY_INDEX_LABEL: Record<EquityIndexKey, string> = { world: "World", em: "Emergentes", nasdaq: "Nasdaq" };
+const EQUITY_INDEX_OPTIONS: EquityIndexKey[] = ["world", "em", "nasdaq"];
+
 const PRICE_POLL_INTERVAL_MS = 15 * 60 * 1000;
 const HISTORY_RANGE_OPTIONS: Array<[HistoryRange, string]> = [
   ["1d", "Día"], ["1w", "Semana"], ["1m", "Mes"], ["ytd", "YTD"], ["1y", "Año"],
@@ -46,7 +49,7 @@ export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts, we
   const [stagflation, setStagflation] = useState<boolean>(true);
   const [editing, setEditing] = useState<boolean>(false);
   const [editingTargets, setEditingTargets] = useState<boolean>(false);
-  const [drilldown, setDrilldown] = useState<string>("world");
+  const [drilldown, setDrilldown] = useState<EquityIndexKey>("world");
   const [view, setView] = useState<CompositionView>("countries");
   const [loadingPrices, setLoadingPrices] = useState<boolean>(false);
   const [priceRefreshWarning, setPriceRefreshWarning] = useState<string | null>(null);
@@ -65,17 +68,8 @@ export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts, we
   const totalDebt = debts.reduce((sum,debt)=>sum+(debt.balance||0),0);
   const netWorth = total - totalDebt;
 
-  const appleWatchDaysLeft = ((): number | null => {
-    const debt = debts.find(x => x.id === "applewatch");
-    if (!debt || debt.balance <= 0 || !debt.deadline) return null;
-    const daysLeft = Math.ceil((new Date(debt.deadline).getTime() - new Date().getTime()) / 86400000);
-    return daysLeft;
-  })();
-
   const alerts: Alert[] = wealthTargets == null ? [] : ((targets: WealthTargets): Alert[] => {
     const list: Alert[] = [];
-    if (appleWatchDaysLeft != null && appleWatchDaysLeft >= 0)
-      list.push({ kind: appleWatchDaysLeft <= 3 ? "bad" : "warn", message: `Liquidar Apple Watch: quedan ${appleWatchDaysLeft} día${appleWatchDaysLeft===1?"":"s"} (antes del 10 de julio).` });
     if (liquidityTotal < targets.minimumFund)
       list.push({ kind:"warn", message:`Fondo de emergencia por debajo del mínimo de ${currencyFormatter.euro(targets.minimumFund)}. Es la prioridad.` });
     if (btcWeightTotal > targets.btcSellWeight && total > targets.btcSellCapital)
@@ -109,19 +103,27 @@ export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts, we
     .map((position, index) => ({ name: position.name, value: position.value, color: seriesColorAt(index) }))
     .filter((slice) => slice.value > 0);
 
-  const compositionKeys = Object.keys(COMPOSITIONS).filter(key => portfolio.some(position => position.id === key));
-  const activeDrilldown = compositionKeys.includes(drilldown) ? drilldown : compositionKeys[0];
-  const composition = COMPOSITIONS[activeDrilldown];
+  const compositionKeys = EQUITY_INDEX_OPTIONS.filter(key => portfolio.some(position => position.equityIndex === key));
+  const activeDrilldown: EquityIndexKey | undefined = compositionKeys.includes(drilldown) ? drilldown : compositionKeys[0];
+  const composition = activeDrilldown ? COMPOSITIONS[activeDrilldown] : undefined;
   const compositionData: CompositionItem[] = composition ? (view === "countries" ? composition.countries : composition.sectors) : [];
 
-  const editPosition = (id: string, field: EditablePositionField, value: string): void => setPortfolio(positions => positions.map(position => position.id === id
-    ? { ...position, [field]: (field === "units" || field === "price") ? (parseFloat(value) || 0) : value } as Position
+  const editPosition = (id: string, field: EditablePositionField, value: string): void => setPortfolio(positions => positions.map(position => {
+    if (position.id !== id) return position;
+    const updatedValue = (field === "units" || field === "price") ? (parseFloat(value) || 0) : value;
+    const updatedPosition = { ...position, [field]: updatedValue } as Position;
+    if (field === "type" && (value === "cripto" || value === "efectivo")) updatedPosition.equityIndex = null;
+    return updatedPosition;
+  }));
+  const setPositionEquityIndex = (id: string, value: string): void => setPortfolio(positions => positions.map(position => position.id === id
+    ? { ...position, equityIndex: value === "" ? null : (value as EquityIndexKey) }
     : position));
   const removePosition = (id: string): void => setPortfolio(positions => positions.filter(position => position.id !== id));
   const addPosition = (type: PositionType): void => setPortfolio(positions => [...positions, {
     id: idGenerator.generate(), name: type === "efectivo" ? "Nuevo efectivo" : "Nueva posición",
     ticker: "", type, units: 0, price: type === "efectivo" ? 1 : 0,
     group: type === "cripto" ? "btc" : type === "efectivo" ? "liquidez" : "rv",
+    equityIndex: null,
   }]);
 
   const portfolioRef = useRef(portfolio);
@@ -181,7 +183,7 @@ export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts, we
   const scoreColor = score == null ? palette.faint : score.total >= 8 ? palette.acc : score.total >= 6 ? palette.warn : palette.bad;
   const POSITION_TYPE_LABEL: Record<PositionType, string> = { fondo:"Fondo", etf:"ETF", cripto:"Cripto", efectivo:"Efectivo" };
   const availableTypes: PositionType[] = ["fondo","etf","cripto","efectivo"];
-  const equityRows: Array<[string, string, number]> = wealthTargets == null ? [] : [
+  const equityRows: Array<[EquityIndexKey, string, number]> = wealthTargets == null ? [] : [
     ["world","World",wealthTargets.equityTargets.world],
     ["em","Emergentes",wealthTargets.equityTargets.em],
     ["nasdaq","Nasdaq",wealthTargets.equityTargets.nasdaq],
@@ -288,6 +290,15 @@ export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts, we
                     </label>
                     <span className="num" style={{ fontSize:15, fontWeight:600, color:palette.acc }}>= {currencyFormatter.euroWithCents((position.units||0)*(position.price||0))}</span>
                   </div>
+                )}
+                {(position.type === "fondo" || position.type === "etf") && (
+                  <label style={{ display:"block", marginTop:10 }}>
+                    <div style={{ fontSize:11, color:palette.sub, marginBottom:3 }}>Índice</div>
+                    <select className="inp" value={position.equityIndex ?? ""} onChange={(event: React.ChangeEvent<HTMLSelectElement>) => setPositionEquityIndex(position.id,event.target.value)}>
+                      <option value="">Ninguno</option>
+                      {EQUITY_INDEX_OPTIONS.map(key => <option key={key} value={key}>{EQUITY_INDEX_LABEL[key]}</option>)}
+                    </select>
+                  </label>
                 )}
               </div>
             ))}
@@ -439,7 +450,7 @@ export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts, we
           ) : (
             <>
               {equityRows.map(([key,label,target]) => {
-                const exists = portfolio.some(position => position.id === key);
+                const exists = portfolio.some(position => position.equityIndex === key);
                 const weight = equityWeightOf(key);
                 return (
                   <div key={key} style={{ marginBottom:16, opacity: exists?1:.4 }}>

@@ -25,7 +25,7 @@ describe("TursoPortfolioRepository", () => {
   });
 
   it("should round-trip a priced position through save and findAll", async () => {
-    const bitcoin: Position = { id: "btc", name: "Bitcoin", ticker: "BTC-EUR", type: "cripto", units: 0.003441, price: 60848, group: "btc" };
+    const bitcoin: Position = { id: "btc", name: "Bitcoin", ticker: "BTC-EUR", type: "cripto", units: 0.003441, price: 60848, group: "btc", equityIndex: null };
 
     await repository.saveAll("user-1", [bitcoin]);
     const positions = await repository.findAll("user-1");
@@ -33,9 +33,19 @@ describe("TursoPortfolioRepository", () => {
     expect(positions).toEqual([bitcoin]);
   });
 
+  it("should round-trip a fund position's assigned equityIndex through save and findAll", async () => {
+    const worldFund: Position = { id: "world", name: "Fidelity MSCI World", ticker: "0P0001CLDK.F", type: "fondo", units: 30.12, price: 13.9762, group: "rv", equityIndex: "world" };
+
+    await repository.saveAll("user-1", [worldFund]);
+    const positions = await repository.findAll("user-1");
+
+    expect(positions).toEqual([worldFund]);
+    expect(positions[0].equityIndex).toBe("world");
+  });
+
   it("should replace the previously saved positions when saveAll is called again for the same user", async () => {
-    const bitcoin: Position = { id: "btc", name: "Bitcoin", ticker: "BTC-EUR", type: "cripto", units: 0.003441, price: 60848, group: "btc" };
-    const cash: Position = { id: "liquidez", name: "Fondo emergencia", ticker: "", type: "efectivo", units: 489.93, price: 1, group: "liquidez" };
+    const bitcoin: Position = { id: "btc", name: "Bitcoin", ticker: "BTC-EUR", type: "cripto", units: 0.003441, price: 60848, group: "btc", equityIndex: null };
+    const cash: Position = { id: "liquidez", name: "Fondo emergencia", ticker: "", type: "efectivo", units: 489.93, price: 1, group: "liquidez", equityIndex: null };
 
     await repository.saveAll("user-1", [bitcoin]);
     await repository.saveAll("user-1", [cash]);
@@ -45,8 +55,8 @@ describe("TursoPortfolioRepository", () => {
   });
 
   it("should keep positions isolated per user so one user never sees another user's portfolio", async () => {
-    const bitcoin: Position = { id: "btc", name: "Bitcoin", ticker: "BTC-EUR", type: "cripto", units: 0.003441, price: 60848, group: "btc" };
-    const cash: Position = { id: "liquidez", name: "Fondo emergencia", ticker: "", type: "efectivo", units: 489.93, price: 1, group: "liquidez" };
+    const bitcoin: Position = { id: "btc", name: "Bitcoin", ticker: "BTC-EUR", type: "cripto", units: 0.003441, price: 60848, group: "btc", equityIndex: null };
+    const cash: Position = { id: "liquidez", name: "Fondo emergencia", ticker: "", type: "efectivo", units: 489.93, price: 1, group: "liquidez", equityIndex: null };
 
     await repository.saveAll("user-1", [bitcoin]);
     await repository.saveAll("user-2", [cash]);
@@ -56,8 +66,8 @@ describe("TursoPortfolioRepository", () => {
   });
 
   it("should not delete another user's positions when saving the current user's portfolio", async () => {
-    const bitcoin: Position = { id: "btc", name: "Bitcoin", ticker: "BTC-EUR", type: "cripto", units: 0.003441, price: 60848, group: "btc" };
-    const cash: Position = { id: "liquidez", name: "Fondo emergencia", ticker: "", type: "efectivo", units: 489.93, price: 1, group: "liquidez" };
+    const bitcoin: Position = { id: "btc", name: "Bitcoin", ticker: "BTC-EUR", type: "cripto", units: 0.003441, price: 60848, group: "btc", equityIndex: null };
+    const cash: Position = { id: "liquidez", name: "Fondo emergencia", ticker: "", type: "efectivo", units: 489.93, price: 1, group: "liquidez", equityIndex: null };
     await repository.saveAll("user-1", [bitcoin]);
     await repository.saveAll("user-2", [cash]);
 

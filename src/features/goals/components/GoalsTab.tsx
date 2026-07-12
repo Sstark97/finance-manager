@@ -24,7 +24,8 @@ export interface GoalsTabProps {
   wealthTargets: WealthTargets | null;
 }
 
-type EditableDebtField = "installment" | "balance";
+type EditableDebtTextField = "name" | "note";
+type EditableDebtNumberField = "installment" | "balance";
 
 export function GoalsTab({ portfolioDerived, debts, setDebts, settings, setSettings, wealthTargets }: GoalsTabProps): React.JSX.Element {
   if (settings == null) {
@@ -33,30 +34,23 @@ export function GoalsTab({ portfolioDerived, debts, setDebts, settings, setSetti
 
   const effectiveWealthTargets = wealthTargets ?? WEALTH_TARGETS_INITIAL;
 
-  const { currentSalary, fiContribution, fiReturn, btcSavings, btcConditions, countCar } = settings;
+  const { currentSalary, fiContribution, fiReturn, btcSavings, btcConditions } = settings;
   const setCurrentSalary = (value: number): void => setSettings(previous => (previous ? { ...previous, currentSalary: value } : previous));
   const setFiContribution = (value: number): void => setSettings(previous => (previous ? { ...previous, fiContribution: value } : previous));
   const setFiReturn = (value: number): void => setSettings(previous => (previous ? { ...previous, fiReturn: value } : previous));
   const setBtcSavings = (value: number): void => setSettings(previous => (previous ? { ...previous, btcSavings: value } : previous));
   const updateBtcConditions = (updater: (conditions: BtcConditions) => BtcConditions): void => setSettings(previous => (previous ? { ...previous, btcConditions: updater(previous.btcConditions) } : previous));
-  const setCountCar = (value: boolean): void => setSettings(previous => (previous ? { ...previous, countCar: value } : previous));
 
   const { total, invested, liquidityTotal } = portfolioDerived;
 
-  const carDebt = debts.find(debt => debt.id === "coche");
   const totalDebt = debts.reduce((sum,debt)=>sum+(debt.balance||0),0);
-  const debtWithoutCar = totalDebt - (carDebt?.balance || 0);
-  const netWorth = countCar ? total - debtWithoutCar : total - totalDebt;
+  const netWorth = total - totalDebt;
 
-  const editDebt = (id: string, field: EditableDebtField, value: string): void => setDebts(debtList => debtList.map(debt => debt.id===id ? { ...debt, [field]: parseFloat(value)||0 } : debt));
+  const editDebtText = (id: string, field: EditableDebtTextField, value: string): void => setDebts(debtList => debtList.map(debt => debt.id===id ? { ...debt, [field]: value } : debt));
+  const editDebtNumber = (id: string, field: EditableDebtNumberField, value: string): void => setDebts(debtList => debtList.map(debt => debt.id===id ? { ...debt, [field]: parseFloat(value)||0 } : debt));
   const markSettled = (id: string): void => setDebts(debtList => debtList.map(debt => debt.id===id ? { ...debt, balance: 0 } : debt));
+  const removeDebt = (id: string): void => setDebts(debtList => debtList.filter(debt => debt.id !== id));
   const addDebt = (): void => setDebts(debtList => [...debtList, { id: idGenerator.generate(), name: "Nueva deuda", installment: 0, balance: 0, note: "" }]);
-
-  const appleWatchDaysLeft = ((): number | null => {
-    const debt = debts.find(x => x.id === "applewatch");
-    if (!debt || debt.balance <= 0 || !debt.deadline) return null;
-    return Math.ceil((new Date(debt.deadline).getTime() - new Date().getTime()) / 86400000);
-  })();
 
   const projection = financialProjectionCalculator.project({
     initial: total, contribution: fiContribution, annualReturn: fiReturn, target: FI_GOAL.capital,
@@ -75,18 +69,6 @@ export function GoalsTab({ portfolioDerived, debts, setDebts, settings, setSetti
 
   return (
     <div className="grid" style={{ gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,340px),1fr))" }}>
-
-      {appleWatchDaysLeft != null && appleWatchDaysLeft >= 0 && (
-        <div className="card span-full" style={{ borderColor: appleWatchDaysLeft<=3?palette.bad:palette.warn, background: appleWatchDaysLeft<=3 ? "#2a1710" : palette.panel }}>
-          <div style={{ display:"flex", gap:12, alignItems:"center" }}>
-            <span style={{ fontSize:22 }}>⚠</span>
-            <div>
-              <div style={{ fontSize:14, color:palette.ink, fontWeight:600 }}>Liquidar Apple Watch (revolving 24% TAE)</div>
-              <div style={{ fontSize:12.5, color:palette.sub, marginTop:2 }}>Quedan <strong style={{color:palette.ink}}>{appleWatchDaysLeft} día{appleWatchDaysLeft===1?"":"s"}</strong> antes del 10 de julio de 2026. Saldo: {currencyFormatter.euroWithCents(debts.find(debt=>debt.id==="applewatch")?.balance || 0)}. Pasa la tarjeta a pago total y no la vuelvas a usar en revolving.</div>
-            </div>
-          </div>
-        </div>
-      )}
 
       <div className="card span-2">
         <div className="eyebrow" style={{ marginBottom:8 }}>Libertad financiera</div>
@@ -146,37 +128,40 @@ export function GoalsTab({ portfolioDerived, debts, setDebts, settings, setSetti
       </div>
 
       <div className="card span-2">
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14, flexWrap:"wrap", gap:8 }}>
-          <div className="eyebrow">Deudas y patrimonio neto</div>
-          <label style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, color:palette.sub }}>
-            <input type="checkbox" checked={countCar} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>setCountCar(event.target.checked)} />
-            Contar el coche como activo (neutraliza su deuda)
-          </label>
-        </div>
+        <div className="eyebrow" style={{ marginBottom:14 }}>Deudas y patrimonio neto</div>
         {debts.length === 0 ? (
           <div style={{ fontSize:12.5, color:palette.faint, marginBottom:14 }}>Aún no has añadido deudas.</div>
         ) : (
           debts.map(debt => (
             <div key={debt.id} className="deuda-row" style={{ marginBottom:12, paddingBottom:12, borderBottom:`1px solid ${palette.line}` }}>
               <div>
-                <div style={{ fontSize:13, color:palette.ink }}>{debt.name}</div>
-                <div style={{ fontSize:11, color: debt.deadline ? palette.warn : palette.faint, marginTop:2 }}>{debt.note}</div>
+                <label>
+                  <div style={{ fontSize:10.5, color:palette.faint, marginBottom:2 }}>Nombre</div>
+                  <input className="inp" value={debt.name} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>editDebtText(debt.id,"name",event.target.value)} style={{fontFamily:"'DM Sans',sans-serif"}} />
+                </label>
+                <label style={{ display:"block", marginTop:6 }}>
+                  <div style={{ fontSize:10.5, color:palette.faint, marginBottom:2 }}>Nota</div>
+                  <input className="inp" value={debt.note} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>editDebtText(debt.id,"note",event.target.value)} style={{fontFamily:"'DM Sans',sans-serif"}} />
+                </label>
               </div>
               <label>
                 <div style={{ fontSize:10.5, color:palette.faint, marginBottom:2 }}>Cuota/mes</div>
-                <input className="inp" type="number" step="any" value={debt.installment} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>editDebt(debt.id,"installment",event.target.value)} />
+                <input className="inp" type="number" step="any" value={debt.installment} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>editDebtNumber(debt.id,"installment",event.target.value)} />
               </label>
               <label>
                 <div style={{ fontSize:10.5, color:palette.faint, marginBottom:2 }}>Saldo pendiente</div>
-                <input className="inp" type="number" step="any" value={debt.balance} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>editDebt(debt.id,"balance",event.target.value)} />
+                <input className="inp" type="number" step="any" value={debt.balance} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>editDebtNumber(debt.id,"balance",event.target.value)} />
               </label>
-              <button className="seg" onClick={()=>markSettled(debt.id)} title="Marcar como liquidada">Liquidar</button>
+              <div style={{ display:"flex", gap:6 }}>
+                <button className="seg" onClick={()=>markSettled(debt.id)} title="Marcar como liquidada">Liquidar</button>
+                <button className="seg" onClick={()=>removeDebt(debt.id)} title="Eliminar deuda" style={{ color:palette.bad }}>Eliminar</button>
+              </div>
             </div>
           ))
         )}
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:12, marginTop:14 }}>
           <Metric label="Deuda total" value={currencyFormatter.euro(totalDebt)} sub="suma de saldos pendientes" />
-          <Metric label="Patrimonio neto" value={currencyFormatter.euro(netWorth)} sub={countCar ? "coche neutralizado" : "coche cuenta como deuda"} />
+          <Metric label="Patrimonio neto" value={currencyFormatter.euro(netWorth)} sub="activos − deudas" />
           <button className="seg on" onClick={addDebt}>+ Añadir deuda</button>
         </div>
       </div>
@@ -219,7 +204,7 @@ export function GoalsTab({ portfolioDerived, debts, setDebts, settings, setSetti
         <div className="barra" style={{ marginBottom:12 }}>
           <div className="barra-fill" style={{ width:`${Math.min(100, btcSavings/BTC_OP_GOAL.target*100)}%`, background:palette.acc }} />
         </div>
-        <div style={{ fontSize:12, color:palette.sub, marginBottom:14 }}>Hucha para 2 tramos en nov–dic 2026 (financiada con AW liberado + Kindle liberado + ~50€/mes caprichos, ventana {BTC_OP_GOAL.window}).</div>
+        <div style={{ fontSize:12, color:palette.sub, marginBottom:14 }}>Hucha para 2 tramos (financiada con deudas liquidadas + ~50€/mes caprichos, ventana {BTC_OP_GOAL.window}).</div>
         <div className="eyebrow" style={{ marginBottom:8 }}>3 condiciones inamovibles</div>
         <label style={{ display:"flex", gap:8, alignItems:"center", marginBottom:8, fontSize:12.5, color: emergencyFundMet?palette.sub:palette.bad }}>
           <input type="checkbox" checked={emergencyFundMet} disabled readOnly /> Fondo de emergencia &gt;{currencyFormatter.euro(effectiveWealthTargets.minimumFund)} intacto

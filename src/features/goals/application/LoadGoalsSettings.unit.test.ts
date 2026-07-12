@@ -19,7 +19,7 @@ describe("LoadGoalsSettings", () => {
   it("should return the settings stored in the repository for the given user", async () => {
     const settings: GoalsSettings = {
       currentSalary: 27000, fiContribution: 293, fiReturn: 0.07, btcSavings: 0,
-      btcConditions: { disposable: true, dcaActive: true }, countCar: true,
+      btcConditions: { disposable: true, dcaActive: true },
     };
     const useCase = new LoadGoalsSettings(new FakeGoalsSettingsRepository(settings));
 

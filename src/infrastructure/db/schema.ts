@@ -44,6 +44,7 @@ export const positions = sqliteTable(
     units: real("units").notNull(),
     groupName: text("group_name").notNull(),
     lastPrice: real("last_price"),
+    equityIndex: text("equity_index"),
     updatedAt: integer("updated_at").notNull(),
   },
   (table) => [index("positions_user_id_idx").on(table.userId)],
@@ -143,7 +144,6 @@ export const goalsSettings = sqliteTable("goals_settings", {
   btcSavings: real("btc_savings").notNull(),
   btcDisposable: integer("btc_disposable").notNull(),
   btcDcaActive: integer("btc_dca_active").notNull(),
-  countCar: integer("count_car").notNull(),
 });
 
 export const wealthTargets = sqliteTable("wealth_targets", {

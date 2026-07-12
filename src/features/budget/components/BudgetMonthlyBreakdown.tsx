@@ -86,17 +86,17 @@ export function BudgetMonthlyBreakdown({ baseBudget, months, setMonths }: Budget
   const monthChartData = CATEGORIES.map(category => ({
     name: category.name.split(" ")[0],
     Presupuestado: result.values[category.id],
-    Real: result.actual[category.id] != null ? result.actual[category.id] : result.values[category.id],
+    Real: result.realized[category.id] ?? result.values[category.id],
   }));
 
   const annualEvolution = months.map(item => {
     const monthResult = monthlyBudgetCalculator.calculate(item, baseBudget);
     const savingsBudgeted = monthResult.values.inversion + monthResult.values.fondoEmergencia;
     const expenseBudgeted = monthResult.values.gastosFijos + monthResult.values.ocio + monthResult.values.caprichos;
-    const savingsRegistered = monthResult.actual.inversion != null || monthResult.actual.fondoEmergencia != null;
-    const expenseRegistered = monthResult.actual.gastosFijos != null || monthResult.actual.ocio != null || monthResult.actual.caprichos != null;
-    const savingsActual = savingsRegistered ? (monthResult.actual.inversion ?? monthResult.values.inversion) + (monthResult.actual.fondoEmergencia ?? monthResult.values.fondoEmergencia) : null;
-    const expenseActual = expenseRegistered ? (monthResult.actual.gastosFijos ?? monthResult.values.gastosFijos) + (monthResult.actual.ocio ?? monthResult.values.ocio) + (monthResult.actual.caprichos ?? monthResult.values.caprichos) : null;
+    const savingsRegistered = monthResult.realized.inversion != null || monthResult.realized.fondoEmergencia != null;
+    const expenseRegistered = monthResult.realized.gastosFijos != null || monthResult.realized.ocio != null || monthResult.realized.caprichos != null;
+    const savingsActual = savingsRegistered ? (monthResult.realized.inversion ?? monthResult.values.inversion) + (monthResult.realized.fondoEmergencia ?? monthResult.values.fondoEmergencia) : null;
+    const expenseActual = expenseRegistered ? (monthResult.realized.gastosFijos ?? monthResult.values.gastosFijos) + (monthResult.realized.ocio ?? monthResult.values.ocio) + (monthResult.realized.caprichos ?? monthResult.values.caprichos) : null;
     return { month: item.label, savingsBudgeted, savingsActual, expenseBudgeted, expenseActual };
   });
 
@@ -137,9 +137,10 @@ export function BudgetMonthlyBreakdown({ baseBudget, months, setMonths }: Budget
         {CATEGORIES.map(category => {
           const categoryBase = baseBudget[category.id];
           const budgeted = draftResult.values[category.id];
-          const actualValue = draftResult.actual[category.id];
-          const isRegistered = actualValue != null;
-          const delta = isRegistered ? actualValue - budgeted : 0;
+          const manualActualValue = draftResult.actual[category.id];
+          const realizedValue = draftResult.realized[category.id];
+          const isRegistered = realizedValue != null;
+          const delta = isRegistered ? realizedValue - budgeted : 0;
           const isOnTrack = category.type === "ahorro" ? delta >= 0 : delta <= 0;
           return (
             <div key={category.id} style={{ marginBottom:16, paddingBottom:14, borderBottom:`1px solid ${palette.line}` }}>
@@ -154,7 +155,7 @@ export function BudgetMonthlyBreakdown({ baseBudget, months, setMonths }: Budget
                 </label>
                 <label>
                   <div style={{ fontSize:10.5, color:palette.faint, marginBottom:2 }}>Real</div>
-                  <input className="inp" type="number" step="any" placeholder="sin registrar" value={actualValue ?? ""} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>editDraftActual(category.id,event.target.value)} />
+                  <input className="inp" type="number" step="any" placeholder="sin registrar" value={manualActualValue ?? ""} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>editDraftActual(category.id,event.target.value)} />
                 </label>
               </div>
               <div style={{ display:"flex", justifyContent:"space-between", marginTop:6, fontSize:11.5 }} className="num">

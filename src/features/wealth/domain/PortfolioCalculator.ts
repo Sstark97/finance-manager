@@ -1,4 +1,4 @@
-import type { Position } from "@/features/wealth/domain/types";
+import type { EquityIndexKey, Position } from "@/features/wealth/domain/types";
 
 export interface PositionWithValue extends Position {
   value: number;
@@ -13,7 +13,7 @@ export interface PortfolioDerived {
   equity: number;
   btcTotal: number;
   btcWeightTotal: number;
-  equityWeightOf: (id: string) => number;
+  equityWeightOf: (equityIndex: EquityIndexKey) => number;
 }
 
 export class PortfolioCalculator {
@@ -31,9 +31,11 @@ export class PortfolioCalculator {
     const equity = equityItems.reduce((sum, position) => sum + position.value, 0);
     const btcTotal = withValue.filter(position => position.group === "btc").reduce((sum, position) => sum + position.value, 0);
     const btcWeightTotal = total ? (btcTotal / total) * 100 : 0;
-    const equityWeightOf = (id: string): number => {
-      const position = equityItems.find(item => item.id === id);
-      return equity && position ? (position.value / equity) * 100 : 0;
+    const equityWeightOf = (equityIndex: EquityIndexKey): number => {
+      const trackedValue = equityItems
+        .filter(item => item.equityIndex === equityIndex)
+        .reduce((sum, item) => sum + item.value, 0);
+      return equity ? (trackedValue / equity) * 100 : 0;
     };
     return { withValue, total, invested, liquidityTotal, equityItems, equity, btcTotal, btcWeightTotal, equityWeightOf };
   }

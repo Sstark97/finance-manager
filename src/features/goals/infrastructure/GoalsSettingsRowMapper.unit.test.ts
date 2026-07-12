@@ -6,13 +6,13 @@ describe("GoalsSettingsRowMapper", () => {
   const mapper = new GoalsSettingsRowMapper();
   const settings: GoalsSettings = {
     currentSalary: 27000, fiContribution: 293, fiReturn: 0.07, btcSavings: 0,
-    btcConditions: { disposable: true, dcaActive: false }, countCar: true,
+    btcConditions: { disposable: true, dcaActive: false },
   };
 
   it("should map integer boolean flags in the row into domain booleans", () => {
     const row = {
       userId: "user-1", currentSalary: 27000, fiContribution: 293, fiReturn: 0.07, btcSavings: 0,
-      btcDisposable: 1, btcDcaActive: 0, countCar: 1,
+      btcDisposable: 1, btcDcaActive: 0,
     };
 
     expect(mapper.toDomain(row)).toEqual(settings);
@@ -23,7 +23,7 @@ describe("GoalsSettingsRowMapper", () => {
 
     expect(row).toEqual({
       userId: "user-1", currentSalary: 27000, fiContribution: 293, fiReturn: 0.07, btcSavings: 0,
-      btcDisposable: 1, btcDcaActive: 0, countCar: 1,
+      btcDisposable: 1, btcDcaActive: 0,
     });
   });
 });

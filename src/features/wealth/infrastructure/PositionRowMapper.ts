@@ -1,4 +1,4 @@
-import type { Position, PositionType, PositionGroup } from "@/features/wealth/domain/types";
+import type { EquityIndexKey, Position, PositionType, PositionGroup } from "@/features/wealth/domain/types";
 import type { positions } from "@/infrastructure/db/schema";
 
 type PositionRow = typeof positions.$inferSelect;
@@ -14,6 +14,7 @@ export class PositionRowMapper {
       units: row.units,
       price: row.lastPrice ?? 0,
       group: row.groupName as PositionGroup,
+      equityIndex: (row.equityIndex as EquityIndexKey | null) ?? null,
     };
   }
 
@@ -27,6 +28,7 @@ export class PositionRowMapper {
       units: position.units,
       groupName: position.group,
       lastPrice: position.price,
+      equityIndex: position.equityIndex,
       updatedAt,
     };
   }

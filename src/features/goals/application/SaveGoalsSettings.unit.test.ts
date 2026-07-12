@@ -23,7 +23,7 @@ describe("SaveGoalsSettings", () => {
     const useCase = new SaveGoalsSettings(repository);
     const settings: GoalsSettings = {
       currentSalary: 27000, fiContribution: 293, fiReturn: 0.07, btcSavings: 0,
-      btcConditions: { disposable: true, dcaActive: true }, countCar: true,
+      btcConditions: { disposable: true, dcaActive: true },
     };
 
     await useCase.invoke("user-1", settings);
