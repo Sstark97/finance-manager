@@ -5,7 +5,9 @@ export function AppStyles(): React.JSX.Element {
   return (
     <style>{`
       @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=DM+Mono:wght@400;500&display=swap');
-      * { box-sizing: border-box; }
+      * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+      button, .seg, .tabbtn, .inp { outline: none; }
+      button:focus-visible, .seg:focus-visible, .tabbtn:focus-visible, .inp:focus-visible { outline: 2px solid ${palette.acc}; outline-offset: 2px; }
       .grid { display:grid; gap:16px; align-items:start; }
       .card { background:${palette.panel}; border:1px solid ${palette.line}; border-radius:14px; padding:20px; }
       .eyebrow { font:500 11px/1 'DM Mono',monospace; letter-spacing:.14em; text-transform:uppercase; color:${palette.faint}; }
@@ -41,6 +43,14 @@ export function AppStyles(): React.JSX.Element {
       @media (max-width:760px){ .hide-sm { display:none; } .card { padding:16px; } .posrow { grid-template-columns:1fr 1fr; } }
       @media (max-width:640px){ .gf-row, .evt-row, .deuda-row { grid-template-columns:1fr 1fr; } .deuda-row > div:first-child { grid-column:1/-1; } }
       @media (max-width:420px){ .gf-row, .evt-row, .deuda-row { grid-template-columns:1fr; } .tabbtn { padding:8px 12px; font-size:12.5px; } }
+
+      .mobile-tabbar { display:none; }
+      .mobile-tabbar-btn { background:none; border:none; display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 0; flex:1; font-size:10.5px; font-weight:500; }
+      @media (max-width:760px){
+        .mobile-tabbar { display:flex; position:fixed; left:0; right:0; bottom:0; z-index:20; background:${palette.panel}; border-top:1px solid ${palette.line}; padding:6px 8px calc(6px + env(safe-area-inset-bottom)); }
+        .shell-with-mobile-tabbar { padding-bottom:calc(64px + env(safe-area-inset-bottom)); }
+        .desktop-tabnav { display:none; }
+      }
     `}</style>
   );
 }

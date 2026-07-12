@@ -96,7 +96,7 @@ describe("MonthlyBudgetCalculator", () => {
     expect(result.income).toBe(2000 + 100);
   });
 
-  it("should compute surplus as income minus totalBudgeted", () => {
+  it("should compute surplus as income minus totalBudgeted when nothing has been realized yet", () => {
     const month = buildMonth();
 
     const result = new MonthlyBudgetCalculator().calculate(month, base);
@@ -104,6 +104,18 @@ describe("MonthlyBudgetCalculator", () => {
 
     expect(result.totalBudgeted).toBe(expectedTotalBudgeted);
     expect(result.surplus).toBe(base.ingresoNeto - expectedTotalBudgeted);
+  });
+
+  it("should compute surplus as income minus totalActual, reflecting real spending events over the plan", () => {
+    const month = buildMonth({
+      events: [{ id: "e1", name: "Deuda puntual", amount: 500, category: "gastosFijos" }],
+    });
+
+    const result = new MonthlyBudgetCalculator().calculate(month, base);
+    const expectedTotalBudgeted = base.gastosFijos + base.inversion + base.fondoEmergencia + base.ocio + base.caprichos;
+
+    expect(result.surplus).toBe(base.ingresoNeto - (expectedTotalBudgeted + 500));
+    expect(result.surplus).not.toBe(base.ingresoNeto - expectedTotalBudgeted);
   });
 
   it("should use the realized value for totalActual when a category has been registered", () => {

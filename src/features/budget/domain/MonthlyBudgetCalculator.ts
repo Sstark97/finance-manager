@@ -27,7 +27,6 @@ export class MonthlyBudgetCalculator {
       .reduce((sum, event) => sum + (event.amount || 0), 0);
     const income = (month.netIncomeOverride ?? base.ingresoNeto) + incomeEvents;
     const totalBudgeted = CATEGORIES.reduce((sum, category) => sum + values[category.id], 0);
-    const surplus = income - totalBudgeted;
     const actual = {} as Record<CategoryId, number | null>;
     const realized = {} as Record<CategoryId, number | null>;
     CATEGORIES.forEach(category => {
@@ -41,6 +40,7 @@ export class MonthlyBudgetCalculator {
       const realizedValue = realized[category.id];
       return sum + (realizedValue != null ? realizedValue : values[category.id]);
     }, 0);
+    const surplus = income - totalActual;
     return { values, income, totalBudgeted, surplus, actual, realized, totalActual };
   }
 }

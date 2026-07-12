@@ -9,6 +9,7 @@ import type { Month, Budget, FixedExpenseItem } from "@/features/budget/domain/t
 import type { GoalsSettings } from "@/features/goals/application/GoalsSettings";
 import type { WealthTargets } from "@/features/wealth/domain/WealthTargets";
 import { AppStyles } from "@/app/AppStyles";
+import { MobileTabBar, WealthIcon, BudgetIcon, GoalsIcon } from "@/app/MobileTabBar";
 import { WealthTab } from "@/features/wealth/components/WealthTab";
 import { BudgetTab } from "@/features/budget/components/BudgetTab";
 import { GoalsTab } from "@/features/goals/components/GoalsTab";
@@ -128,14 +129,14 @@ export function FinanceAppShell({
     return () => clearTimeout(timeoutId);
   }, [wealthTargets]);
 
-  const TABS: Array<{ id: TabId; label: string }> = [
-    { id: "wealth",  label: "Patrimonio" },
-    { id: "budget", label: "Presupuesto" },
-    { id: "goals",       label: "Metas" },
+  const TABS: Array<{ id: TabId; label: string; icon: (color: string) => React.ReactNode }> = [
+    { id: "wealth",  label: "Patrimonio", icon: WealthIcon },
+    { id: "budget", label: "Presupuesto", icon: BudgetIcon },
+    { id: "goals",       label: "Metas", icon: GoalsIcon },
   ];
 
   return (
-    <div style={{ background:palette.bg, minHeight:"100vh", color:palette.ink, fontFamily:"'DM Sans',system-ui,sans-serif", padding:"clamp(16px,4vw,40px)" }}>
+    <div className="shell-with-mobile-tabbar" style={{ background:palette.bg, minHeight:"100vh", color:palette.ink, fontFamily:"'DM Sans',system-ui,sans-serif", padding:"clamp(16px,4vw,40px)" }}>
       <AppStyles />
 
       <header style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", flexWrap:"wrap", gap:16, marginBottom:20 }}>
@@ -146,7 +147,7 @@ export function FinanceAppShell({
           </h1>
         </div>
         <div style={{ display:"flex", alignItems:"center", gap:12, flexWrap:"wrap" }}>
-          <nav className="tabnav">
+          <nav className="tabnav desktop-tabnav">
             {TABS.map(tabItem => (
               <button key={tabItem.id} className={`tabbtn ${tab===tabItem.id?"on":""}`} onClick={() => setTab(tabItem.id)}>{tabItem.label}</button>
             ))}
@@ -181,6 +182,8 @@ export function FinanceAppShell({
         Cartera editable · el precio lo trae Yahoo por ticker vía el backend (POST /api/prices). Composición de índices orientativa.
         No es asesoramiento financiero regulado. Los cambios se guardan automáticamente.
       </footer>
+
+      <MobileTabBar items={TABS} activeTabId={tab} onSelect={setTab} />
     </div>
   );
 }
