@@ -41,4 +41,10 @@ describe("WealthTargetsOnboarding", () => {
       btcPauseWeight: 0, btcSellWeight: 0, btcPauseCapital: 0, btcSellCapital: 0,
     });
   });
+
+  it("should append the caller's className to its own card classes so the mobile grid can reorder it", () => {
+    const { container } = render(<WealthTargetsOnboarding onCreateTargets={vi.fn()} className="widget-onboarding-cta" />);
+
+    expect(container.querySelector(".card.span-full.widget-onboarding-cta")).not.toBeNull();
+  });
 });

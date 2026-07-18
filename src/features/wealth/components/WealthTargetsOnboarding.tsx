@@ -7,9 +7,10 @@ import { WEALTH_TARGETS_INITIAL } from "@/features/wealth/data/wealthTargets";
 
 export interface WealthTargetsOnboardingProps {
   onCreateTargets: (targets: WealthTargets) => void;
+  className?: string;
 }
 
-export function WealthTargetsOnboarding({ onCreateTargets }: WealthTargetsOnboardingProps): React.JSX.Element {
+export function WealthTargetsOnboarding({ onCreateTargets, className }: WealthTargetsOnboardingProps): React.JSX.Element {
   const [emergencyFund, setEmergencyFund] = useState<number>(0);
   const [minimumFund, setMinimumFund] = useState<number>(0);
   const [equityWorld, setEquityWorld] = useState<number>(0);
@@ -29,7 +30,7 @@ export function WealthTargetsOnboarding({ onCreateTargets }: WealthTargetsOnboar
   };
 
   return (
-    <div className="card span-full">
+    <div className={`card span-full${className ? ` ${className}` : ""}`}>
       <div className="eyebrow" style={{ marginBottom:6 }}>Configura tus objetivos de patrimonio</div>
       <p style={{ margin:"0 0 16px", fontSize:12.5, color:palette.sub, lineHeight:1.5 }}>
         Aún no has guardado tus objetivos de patrimonio. Estos parámetros alimentan el fondo de

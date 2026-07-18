@@ -361,7 +361,7 @@ export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts, we
 
       <div className="grid" style={{ gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,340px),1fr))" }}>
 
-        {wealthTargets == null && <WealthTargetsOnboarding onCreateTargets={setWealthTargets} />}
+        {wealthTargets == null && <WealthTargetsOnboarding className="widget-onboarding-cta" onCreateTargets={setWealthTargets} />}
 
         <div className="card">
           <div className="eyebrow" style={{ marginBottom:16 }}>Nota de la cartera</div>
@@ -387,7 +387,7 @@ export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts, we
           )}
         </div>
 
-        <div className="card">
+        <div className="card widget-wealth-distribution">
           <div className="eyebrow" style={{ marginBottom:8 }}>Distribución del patrimonio</div>
           {portfolioPie.length === 0 ? (
             <div style={{ height:200, display:"flex", alignItems:"center", justifyContent:"center", textAlign:"center", padding:"0 16px", color:palette.faint, fontSize:12.5, lineHeight:1.5 }}>
@@ -472,7 +472,7 @@ export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts, we
           )}
         </div>
 
-        <div className="card span-full">
+        <div className="card span-full widget-wealth-evolution">
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:10, marginBottom:16 }}>
             <div className="eyebrow">Evolución del patrimonio</div>
             <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
@@ -505,7 +505,7 @@ export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts, we
           </div>
         </div>
 
-        <div className={compositionKeys.length > 0 ? "card" : "card span-full"}>
+        <div className={`${compositionKeys.length > 0 ? "card" : "card span-full"} widget-emergency-fund`}>
           <div className="eyebrow" style={{ marginBottom:14 }}>Fondo de emergencia / casa</div>
           {wealthTargets == null ? (
             <div style={{ fontSize:12.5, color:palette.faint, lineHeight:1.5 }}>
