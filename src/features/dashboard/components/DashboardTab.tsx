@@ -5,6 +5,7 @@ import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveCo
 import { palette, seriesColorAt } from "@/lib/theme";
 import { currencyFormatter } from "@/lib/CurrencyFormatter";
 import type { Debt } from "@/shared/domain/types";
+import type { Position } from "@/features/wealth/domain/types";
 import type { PortfolioDerived } from "@/features/wealth/domain/PortfolioCalculator";
 import type { WealthTargets } from "@/features/wealth/domain/WealthTargets";
 import type { Budget, Month } from "@/features/budget/domain/types";
@@ -13,8 +14,10 @@ import { FI_GOAL } from "@/features/goals/domain/config";
 import { dashboardSummaryCalculator } from "@/features/dashboard/domain/DashboardSummaryCalculator";
 import { wealthCompositionCalculator } from "@/features/dashboard/domain/WealthCompositionCalculator";
 import { surplusHistoryCalculator } from "@/features/dashboard/domain/SurplusHistoryCalculator";
+import { WealthEvolutionChart } from "@/features/wealth/components/WealthEvolutionChart";
 
 export interface DashboardTabProps {
+  portfolio: Position[];
   portfolioDerived: PortfolioDerived;
   debts: Debt[];
   baseBudget: Budget | null;
@@ -23,7 +26,7 @@ export interface DashboardTabProps {
   wealthTargets: WealthTargets | null;
 }
 
-export function DashboardTab({ portfolioDerived, debts, baseBudget, months, goalsSettings, wealthTargets }: DashboardTabProps): React.JSX.Element {
+export function DashboardTab({ portfolio, portfolioDerived, debts, baseBudget, months, goalsSettings, wealthTargets }: DashboardTabProps): React.JSX.Element {
   const {
     netWorth, currentMonth, monthlyResult, fiProgress, fiProjectionMonths,
     emergencyFundMet, emergencyFundProgress, emergencyFundTarget, emergencyFundMinimum,
@@ -52,6 +55,10 @@ export function DashboardTab({ portfolioDerived, debts, baseBudget, months, goal
             <span style={{ color: netWorth.netWorthIncludingAllDebt >= 0 ? palette.ink : palette.bad, fontWeight:600 }}>{currencyFormatter.euro(netWorth.netWorthIncludingAllDebt)}</span>
           </div>
         </div>
+      </div>
+
+      <div className="grid">
+        <WealthEvolutionChart portfolio={portfolio} total={portfolioDerived.total} liquidityTotal={portfolioDerived.liquidityTotal} />
       </div>
 
       <div className="grid dashboard-metrics-row" style={{ gridTemplateColumns:"repeat(3,1fr)" }}>

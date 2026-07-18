@@ -195,7 +195,7 @@ export function FinanceAppShell({
         <div role="tabpanel" id="finance-tabpanel" aria-labelledby={`tab-${tab}`} tabIndex={-1}>
           {tab === "dashboard" && (
             <DashboardTab
-              portfolioDerived={portfolioDerived} debts={debts} baseBudget={baseBudget} months={months}
+              portfolio={portfolio} portfolioDerived={portfolioDerived} debts={debts} baseBudget={baseBudget} months={months}
               goalsSettings={goalsSettings} wealthTargets={wealthTargets}
             />
           )}

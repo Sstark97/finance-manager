@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { DashboardTab } from "@/features/dashboard/components/DashboardTab";
 import { portfolioCalculator } from "@/features/wealth/domain/PortfolioCalculator";
@@ -24,14 +24,19 @@ function netWorthCardHeadline(): HTMLElement {
   return card.querySelector(".disp") as HTMLElement;
 }
 
+beforeEach(() => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false } as Response));
+});
+
 describe("DashboardTab", () => {
   it("should show the net worth as the portfolio total minus the active debt balance", () => {
-    const portfolioDerived = portfolioCalculator.derive([CASH_POSITION, FUND_POSITION]);
+    const portfolio = [CASH_POSITION, FUND_POSITION];
+    const portfolioDerived = portfolioCalculator.derive(portfolio);
     const debts: Debt[] = [{ id: "coche", name: "Coche", installment: 173.28, balance: 8000, note: "", isLongTerm: false }];
 
     render(
       <DashboardTab
-        portfolioDerived={portfolioDerived} debts={debts} baseBudget={null} months={[]}
+        portfolio={portfolio} portfolioDerived={portfolioDerived} debts={debts} baseBudget={null} months={[]}
         goalsSettings={null} wealthTargets={null}
       />,
     );
@@ -41,12 +46,13 @@ describe("DashboardTab", () => {
   });
 
   it("should exclude a settled debt from the net worth calculation", () => {
-    const portfolioDerived = portfolioCalculator.derive([CASH_POSITION]);
+    const portfolio = [CASH_POSITION];
+    const portfolioDerived = portfolioCalculator.derive(portfolio);
     const debts: Debt[] = [{ id: "coche", name: "Coche", installment: 173.28, balance: 8000, note: "", isLongTerm: false, settledAt: "2026-01-01" }];
 
     render(
       <DashboardTab
-        portfolioDerived={portfolioDerived} debts={debts} baseBudget={null} months={[]}
+        portfolio={portfolio} portfolioDerived={portfolioDerived} debts={debts} baseBudget={null} months={[]}
         goalsSettings={null} wealthTargets={null}
       />,
     );
@@ -55,22 +61,24 @@ describe("DashboardTab", () => {
   });
 
   it("should prompt to configure the budget when there is no base budget yet", () => {
-    const portfolioDerived = portfolioCalculator.derive([]);
+    const portfolio: Position[] = [];
+    const portfolioDerived = portfolioCalculator.derive(portfolio);
 
     render(
-      <DashboardTab portfolioDerived={portfolioDerived} debts={[]} baseBudget={null} months={[]} goalsSettings={null} wealthTargets={null} />,
+      <DashboardTab portfolio={portfolio} portfolioDerived={portfolioDerived} debts={[]} baseBudget={null} months={[]} goalsSettings={null} wealthTargets={null} />,
     );
 
     expect(screen.getByText("Configura tu presupuesto en la pestaña Presupuesto para ver el flujo de este mes.")).toBeInTheDocument();
   });
 
   it("should show the monthly surplus once a month has been registered", () => {
-    const portfolioDerived = portfolioCalculator.derive([]);
+    const portfolio: Position[] = [];
+    const portfolioDerived = portfolioCalculator.derive(portfolio);
     const month: Month = monthFactory.createCurrent();
 
     render(
       <DashboardTab
-        portfolioDerived={portfolioDerived} debts={[]} baseBudget={SAMPLE_BUDGET} months={[month]}
+        portfolio={portfolio} portfolioDerived={portfolioDerived} debts={[]} baseBudget={SAMPLE_BUDGET} months={[month]}
         goalsSettings={null} wealthTargets={null}
       />,
     );
@@ -81,12 +89,13 @@ describe("DashboardTab", () => {
   });
 
   it("should not subtract a long-term debt from the headline net worth", () => {
-    const portfolioDerived = portfolioCalculator.derive([CASH_POSITION]);
+    const portfolio = [CASH_POSITION];
+    const portfolioDerived = portfolioCalculator.derive(portfolio);
     const mortgage: Debt = { id: "hipoteca", name: "Hipoteca", installment: 600, balance: 150000, note: "", isLongTerm: true };
 
     render(
       <DashboardTab
-        portfolioDerived={portfolioDerived} debts={[mortgage]} baseBudget={null} months={[]}
+        portfolio={portfolio} portfolioDerived={portfolioDerived} debts={[mortgage]} baseBudget={null} months={[]}
         goalsSettings={null} wealthTargets={null}
       />,
     );
@@ -95,12 +104,13 @@ describe("DashboardTab", () => {
   });
 
   it("should show the net worth including all debt as a small subtitle", () => {
-    const portfolioDerived = portfolioCalculator.derive([CASH_POSITION]);
+    const portfolio = [CASH_POSITION];
+    const portfolioDerived = portfolioCalculator.derive(portfolio);
     const mortgage: Debt = { id: "hipoteca", name: "Hipoteca", installment: 600, balance: 150000, note: "", isLongTerm: true };
 
     render(
       <DashboardTab
-        portfolioDerived={portfolioDerived} debts={[mortgage]} baseBudget={null} months={[]}
+        portfolio={portfolio} portfolioDerived={portfolioDerived} debts={[mortgage]} baseBudget={null} months={[]}
         goalsSettings={null} wealthTargets={null}
       />,
     );
@@ -111,20 +121,22 @@ describe("DashboardTab", () => {
   });
 
   it("should show a placeholder instead of the composition chart when the portfolio is empty", () => {
-    const portfolioDerived = portfolioCalculator.derive([]);
+    const portfolio: Position[] = [];
+    const portfolioDerived = portfolioCalculator.derive(portfolio);
 
     render(
-      <DashboardTab portfolioDerived={portfolioDerived} debts={[]} baseBudget={null} months={[]} goalsSettings={null} wealthTargets={null} />,
+      <DashboardTab portfolio={portfolio} portfolioDerived={portfolioDerived} debts={[]} baseBudget={null} months={[]} goalsSettings={null} wealthTargets={null} />,
     );
 
     expect(screen.getByText("Sin posiciones todavía. La composición aparecerá aquí en cuanto añadas tu primera posición.")).toBeInTheDocument();
   });
 
   it("should show the wealth composition legend with each group's share once there are positions", () => {
-    const portfolioDerived = portfolioCalculator.derive([CASH_POSITION, FUND_POSITION]);
+    const portfolio = [CASH_POSITION, FUND_POSITION];
+    const portfolioDerived = portfolioCalculator.derive(portfolio);
 
     render(
-      <DashboardTab portfolioDerived={portfolioDerived} debts={[]} baseBudget={null} months={[]} goalsSettings={null} wealthTargets={null} />,
+      <DashboardTab portfolio={portfolio} portfolioDerived={portfolioDerived} debts={[]} baseBudget={null} months={[]} goalsSettings={null} wealthTargets={null} />,
     );
 
     expect(screen.getByText("Liquidez")).toBeInTheDocument();
@@ -133,22 +145,24 @@ describe("DashboardTab", () => {
   });
 
   it("should prompt to configure the budget when there is no surplus history yet", () => {
-    const portfolioDerived = portfolioCalculator.derive([]);
+    const portfolio: Position[] = [];
+    const portfolioDerived = portfolioCalculator.derive(portfolio);
 
     render(
-      <DashboardTab portfolioDerived={portfolioDerived} debts={[]} baseBudget={null} months={[]} goalsSettings={null} wealthTargets={null} />,
+      <DashboardTab portfolio={portfolio} portfolioDerived={portfolioDerived} debts={[]} baseBudget={null} months={[]} goalsSettings={null} wealthTargets={null} />,
     );
 
     expect(screen.getByText("Configura tu presupuesto para ver el superávit de los últimos meses.")).toBeInTheDocument();
   });
 
   it("should show the surplus history once a month has been registered", () => {
-    const portfolioDerived = portfolioCalculator.derive([]);
+    const portfolio: Position[] = [];
+    const portfolioDerived = portfolioCalculator.derive(portfolio);
     const month: Month = monthFactory.createCurrent();
 
     render(
       <DashboardTab
-        portfolioDerived={portfolioDerived} debts={[]} baseBudget={SAMPLE_BUDGET} months={[month]}
+        portfolio={portfolio} portfolioDerived={portfolioDerived} debts={[]} baseBudget={SAMPLE_BUDGET} months={[month]}
         goalsSettings={null} wealthTargets={null}
       />,
     );
@@ -157,12 +171,13 @@ describe("DashboardTab", () => {
   });
 
   it("should warn that the surplus trend is incomplete when only one month has been registered", () => {
-    const portfolioDerived = portfolioCalculator.derive([]);
+    const portfolio: Position[] = [];
+    const portfolioDerived = portfolioCalculator.derive(portfolio);
     const month: Month = monthFactory.createCurrent();
 
     render(
       <DashboardTab
-        portfolioDerived={portfolioDerived} debts={[]} baseBudget={SAMPLE_BUDGET} months={[month]}
+        portfolio={portfolio} portfolioDerived={portfolioDerived} debts={[]} baseBudget={SAMPLE_BUDGET} months={[month]}
         goalsSettings={null} wealthTargets={null}
       />,
     );
@@ -171,13 +186,14 @@ describe("DashboardTab", () => {
   });
 
   it("should not warn about an incomplete surplus trend once two or more months have been registered", () => {
-    const portfolioDerived = portfolioCalculator.derive([]);
+    const portfolio: Position[] = [];
+    const portfolioDerived = portfolioCalculator.derive(portfolio);
     const firstMonth: Month = monthFactory.create(2026, 5);
     const secondMonth: Month = monthFactory.create(2026, 6);
 
     render(
       <DashboardTab
-        portfolioDerived={portfolioDerived} debts={[]} baseBudget={SAMPLE_BUDGET} months={[firstMonth, secondMonth]}
+        portfolio={portfolio} portfolioDerived={portfolioDerived} debts={[]} baseBudget={SAMPLE_BUDGET} months={[firstMonth, secondMonth]}
         goalsSettings={null} wealthTargets={null}
       />,
     );
@@ -186,12 +202,25 @@ describe("DashboardTab", () => {
   });
 
   it("should not warn about an incomplete surplus trend when there is no surplus history at all", () => {
-    const portfolioDerived = portfolioCalculator.derive([]);
+    const portfolio: Position[] = [];
+    const portfolioDerived = portfolioCalculator.derive(portfolio);
 
     render(
-      <DashboardTab portfolioDerived={portfolioDerived} debts={[]} baseBudget={null} months={[]} goalsSettings={null} wealthTargets={null} />,
+      <DashboardTab portfolio={portfolio} portfolioDerived={portfolioDerived} debts={[]} baseBudget={null} months={[]} goalsSettings={null} wealthTargets={null} />,
     );
 
     expect(screen.queryByText("Necesitas al menos 2 meses registrados para ver la tendencia.")).not.toBeInTheDocument();
+  });
+
+  it("should render the wealth evolution chart with its range selector", () => {
+    const portfolio: Position[] = [];
+    const portfolioDerived = portfolioCalculator.derive(portfolio);
+
+    render(
+      <DashboardTab portfolio={portfolio} portfolioDerived={portfolioDerived} debts={[]} baseBudget={null} months={[]} goalsSettings={null} wealthTargets={null} />,
+    );
+
+    expect(screen.getByText("Evolución del patrimonio")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "YTD" })).toBeInTheDocument();
   });
 });
