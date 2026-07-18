@@ -70,6 +70,21 @@ Confirmado contra los tests actualizados.
 - `BudgetMovement` como interfaz es consistente con la convención ya establecida de `Month`/`BudgetEvent`/
   `Budget` en `types.ts` (sin comportamiento propio), no viola class-first aquí.
 
+## Addendum — warnings resueltos tras la review
+
+- Warning 2 (columna `actual_amount` huérfana): resuelto con una nueva migración
+  `drizzle/0005_yellow_psylocke.sql` que hace `DROP COLUMN actual_amount`, generada
+  con `pnpm db:generate`. `MonthRowMapper.toCategoryRows` ya no la escribe.
+- Warning 4 (orquestación inline en `DashboardTab`): resuelto extrayendo
+  `DashboardSummaryCalculator` (`src/features/dashboard/domain/`), siguiendo el mismo
+  patrón que `PortfolioCalculator`/`NetWorthCalculator` (dominio puro, singleton
+  exportado). `DashboardTab.tsx` ahora solo renderiza el resultado.
+- Warning 1 (semántica `actual_amount = 0`) y warning 3 (`saveAll` reescribe todo el
+  historial de movimientos por guardado) se dejan sin cambio de código: el primero es
+  inherente a la decisión de diseño ya confirmada por el usuario; el segundo replica
+  un patrón ya existente en el repo (`events`/overrides) y coincide con la deuda que
+  el propio plan ya señala como nice-to-have #18 (modo offline/escritura incremental).
+
 ## Decisión pendiente del usuario
 
 La migración `0004_opposite_darkhawk.sql` **no se ha aplicado a la base de datos Turso remota de
