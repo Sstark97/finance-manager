@@ -9,10 +9,13 @@ import type { Month, Budget, FixedExpenseItem } from "@/features/budget/domain/t
 import type { GoalsSettings } from "@/features/goals/application/GoalsSettings";
 import type { WealthTargets } from "@/features/wealth/domain/WealthTargets";
 import { AppStyles } from "@/app/AppStyles";
-import { MobileTabBar, WealthIcon, BudgetIcon, GoalsIcon } from "@/app/MobileTabBar";
+import { MobileTabBar, WealthIcon, BudgetIcon, GoalsIcon, DebtsIcon } from "@/app/MobileTabBar";
 import { WealthTab } from "@/features/wealth/components/WealthTab";
 import { BudgetTab } from "@/features/budget/components/BudgetTab";
 import { GoalsTab } from "@/features/goals/components/GoalsTab";
+import { DebtsSection } from "@/features/debts/components/DebtsSection";
+import { financeDataExporter } from "@/shared/domain/FinanceDataExporter";
+import { browserFileDownloader } from "@/shared/infrastructure/BrowserFileDownloader";
 import { savePortfolio } from "@/app/actions/savePortfolio";
 import { saveDebts } from "@/app/actions/saveDebts";
 import { saveBudget } from "@/app/actions/saveBudget";
@@ -22,7 +25,14 @@ import { signOutAction } from "@/app/actions/authSession";
 
 const PERSIST_DEBOUNCE_MS = 800;
 
-type TabId = "wealth" | "budget" | "goals";
+type TabId = "wealth" | "budget" | "debts" | "goals";
+
+const TAB_TITLE: Record<TabId, string> = {
+  wealth: "Patrimonio total",
+  budget: "Presupuesto",
+  debts: "Deudas",
+  goals: "Metas y plan",
+};
 
 export interface FinanceAppShellProps {
   currentUserEmail: string;
@@ -129,9 +139,19 @@ export function FinanceAppShell({
     return () => clearTimeout(timeoutId);
   }, [wealthTargets]);
 
+  const exportAsJson = (): void => {
+    const content = financeDataExporter.toJson({ portfolio, debts, baseBudget, fixedExpenseItems, months });
+    browserFileDownloader.download("finanzas.json", content, "application/json");
+  };
+  const exportAsCsv = (): void => {
+    const content = financeDataExporter.toCsv({ portfolio, debts, baseBudget, fixedExpenseItems, months });
+    browserFileDownloader.download("finanzas.csv", content, "text/csv");
+  };
+
   const TABS: Array<{ id: TabId; label: string; icon: (color: string) => React.ReactNode }> = [
     { id: "wealth",  label: "Patrimonio", icon: WealthIcon },
     { id: "budget", label: "Presupuesto", icon: BudgetIcon },
+    { id: "debts",       label: "Deudas", icon: DebtsIcon },
     { id: "goals",       label: "Metas", icon: GoalsIcon },
   ];
 
@@ -142,17 +162,29 @@ export function FinanceAppShell({
       <header style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", flexWrap:"wrap", gap:16, marginBottom:20 }}>
         <div>
           <div className="eyebrow" style={{ marginBottom:8 }}>Finanzas · {new Date().toLocaleDateString("es-ES",{day:"numeric",month:"long",year:"numeric"})}</div>
-          <h1 className="disp" style={{ margin:0, fontSize:"clamp(24px,4.5vw,36px)", fontWeight:600, letterSpacing:"-.02em" }}>
-            {tab === "wealth" ? "Patrimonio total" : tab === "budget" ? "Presupuesto" : "Metas y plan"}
+          <h1 id="finance-app-heading" className="disp" style={{ margin:0, fontSize:"clamp(24px,4.5vw,36px)", fontWeight:600, letterSpacing:"-.02em" }}>
+            {TAB_TITLE[tab]}
           </h1>
         </div>
         <div style={{ display:"flex", alignItems:"center", gap:12, flexWrap:"wrap" }}>
-          <nav className="tabnav desktop-tabnav">
+          <nav className="tabnav desktop-tabnav" role="tablist" aria-label="Secciones">
             {TABS.map(tabItem => (
-              <button key={tabItem.id} className={`tabbtn ${tab===tabItem.id?"on":""}`} onClick={() => setTab(tabItem.id)}>{tabItem.label}</button>
+              <button
+                key={tabItem.id}
+                id={`tab-${tabItem.id}`}
+                role="tab"
+                aria-selected={tab===tabItem.id}
+                aria-controls="finance-tabpanel"
+                className={`tabbtn ${tab===tabItem.id?"on":""}`}
+                onClick={() => setTab(tabItem.id)}
+              >
+                {tabItem.label}
+              </button>
             ))}
           </nav>
-          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+            <button className="seg" onClick={exportAsJson} style={{ border:`1px solid ${palette.line}` }}>Exportar JSON</button>
+            <button className="seg" onClick={exportAsCsv} style={{ border:`1px solid ${palette.line}` }}>Exportar CSV</button>
             <span style={{ fontSize:12.5, color:palette.sub }}>{currentUserEmail}</span>
             <form action={signOutAction}>
               <button type="submit" className="tabbtn" style={{ border:`1px solid ${palette.line}` }}>Cerrar sesión</button>
@@ -161,22 +193,31 @@ export function FinanceAppShell({
         </div>
       </header>
 
-      {tab === "wealth" && (
-        <WealthTab
-          portfolio={portfolio} setPortfolio={setPortfolio} portfolioDerived={portfolioDerived} debts={debts}
-          wealthTargets={wealthTargets} setWealthTargets={setWealthTargets}
-        />
-      )}
-      {tab === "budget" && (
-        <BudgetTab baseBudget={baseBudget} setBaseBudget={setBaseBudget} months={months} setMonths={setMonths} fixedExpenseItems={fixedExpenseItems} setFixedExpenseItems={setFixedExpenseItems} />
-      )}
-      {tab === "goals" && (
-        <GoalsTab
-          portfolioDerived={portfolioDerived} debts={debts} setDebts={setDebts}
-          settings={goalsSettings} setSettings={setGoalsSettings}
-          wealthTargets={wealthTargets}
-        />
-      )}
+      <main aria-labelledby="finance-app-heading">
+        <div role="tabpanel" id="finance-tabpanel" aria-labelledby={`tab-${tab}`} tabIndex={-1}>
+          {tab === "wealth" && (
+            <WealthTab
+              portfolio={portfolio} setPortfolio={setPortfolio} portfolioDerived={portfolioDerived} debts={debts}
+              wealthTargets={wealthTargets} setWealthTargets={setWealthTargets}
+            />
+          )}
+          {tab === "budget" && (
+            <BudgetTab baseBudget={baseBudget} setBaseBudget={setBaseBudget} months={months} setMonths={setMonths} fixedExpenseItems={fixedExpenseItems} setFixedExpenseItems={setFixedExpenseItems} />
+          )}
+          {tab === "debts" && (
+            <div className="grid" style={{ gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,340px),1fr))" }}>
+              <DebtsSection debts={debts} setDebts={setDebts} portfolioTotal={portfolioDerived.total} />
+            </div>
+          )}
+          {tab === "goals" && (
+            <GoalsTab
+              portfolioDerived={portfolioDerived}
+              settings={goalsSettings} setSettings={setGoalsSettings}
+              wealthTargets={wealthTargets}
+            />
+          )}
+        </div>
+      </main>
 
       <footer style={{ marginTop:24, paddingTop:16, borderTop:`1px solid ${palette.line}`, fontSize:11.5, color:palette.faint, lineHeight:1.6 }}>
         Cartera editable · el precio lo trae Yahoo por ticker vía el backend (POST /api/prices). Composición de índices orientativa.

@@ -127,4 +127,23 @@ describe("WealthTab", () => {
 
     expect(container.textContent).toContain(currencyFormatter.euroWithCents(10000 - activeDebt.balance));
   });
+
+  it("should flag the emergency fund status as below minimum once liquidity drops under it", () => {
+    const cashPosition: Position = { id: "efectivo-1", name: "Cuenta", ticker: "", type: "efectivo", units: 500, price: 1, group: "liquidez", equityIndex: null };
+    const targets = { ...WEALTH_TARGETS_INITIAL, minimumFund: 1000 };
+
+    renderWealthTab([cashPosition], targets);
+
+    expect(screen.getByRole("status", { name: "Fondo de emergencia por debajo del mínimo" })).toBeInTheDocument();
+  });
+
+  it("should show the bitcoin pause threshold warning in the plan status card once crossed", () => {
+    const bitcoin: Position = { id: "btc", name: "Bitcoin", ticker: "BTC-EUR", type: "cripto", units: 0.3, price: 50000, group: "btc", equityIndex: null };
+    const cash: Position = { id: "efectivo-1", name: "Cuenta", ticker: "", type: "efectivo", units: 12000, price: 1, group: "liquidez", equityIndex: null };
+    const targets = { ...WEALTH_TARGETS_INITIAL, btcPauseWeight: 40, btcPauseCapital: 10000, btcSellWeight: 90, btcSellCapital: 200000 };
+
+    renderWealthTab([bitcoin, cash], targets);
+
+    expect(screen.getByText(/pausar aportaciones de BTC/)).toBeInTheDocument();
+  });
 });

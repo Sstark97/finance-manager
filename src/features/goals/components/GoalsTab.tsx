@@ -9,21 +9,17 @@ import type { PortfolioDerived } from "@/features/wealth/domain/PortfolioCalcula
 import type { WealthTargets } from "@/features/wealth/domain/WealthTargets";
 import { WEALTH_TARGETS_INITIAL } from "@/features/wealth/data/wealthTargets";
 import { financialProjectionCalculator } from "@/features/goals/domain/FinancialProjectionCalculator";
-import type { Debt } from "@/shared/domain/types";
 import type { GoalsSettings } from "@/features/goals/application/GoalsSettings";
 import { GoalsSettingsOnboarding } from "@/features/goals/components/GoalsSettingsOnboarding";
-import { DebtsSection } from "@/features/goals/components/DebtsSection";
 
 export interface GoalsTabProps {
   portfolioDerived: PortfolioDerived;
-  debts: Debt[];
-  setDebts: React.Dispatch<React.SetStateAction<Debt[]>>;
   settings: GoalsSettings | null;
   setSettings: React.Dispatch<React.SetStateAction<GoalsSettings | null>>;
   wealthTargets: WealthTargets | null;
 }
 
-export function GoalsTab({ portfolioDerived, debts, setDebts, settings, setSettings, wealthTargets }: GoalsTabProps): React.JSX.Element {
+export function GoalsTab({ portfolioDerived, settings, setSettings, wealthTargets }: GoalsTabProps): React.JSX.Element {
   if (settings == null) {
     return <GoalsSettingsOnboarding onCreateSettings={setSettings} />;
   }
@@ -113,8 +109,6 @@ export function GoalsTab({ portfolioDerived, debts, setDebts, settings, setSetti
           {emergencyFundMet ? "Mínimo intocable cubierto." : `Por debajo del mínimo de ${currencyFormatter.euro(effectiveWealthTargets.minimumFund)}: es la prioridad.`} Objetivo 6 meses de gastos ({currencyFormatter.euro(effectiveWealthTargets.emergencyFund)}).
         </div>
       </div>
-
-      <DebtsSection debts={debts} setDebts={setDebts} portfolioTotal={total} />
 
       <div className="card span-full">
         <div className="eyebrow" style={{ marginBottom:16 }}>Fases del plan (desbloqueadas por salario)</div>

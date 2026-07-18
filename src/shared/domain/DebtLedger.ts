@@ -1,3 +1,4 @@
+import { DebtDeadline } from "@/shared/domain/DebtDeadline";
 import type { Debt } from "@/shared/domain/types";
 
 export class DebtLedger {
@@ -9,6 +10,12 @@ export class DebtLedger {
 
   active(): Debt[] {
     return this.debts.filter((debt) => debt.settledAt === undefined);
+  }
+
+  activeSortedByDeadlineUrgency(referenceDate: Date): Debt[] {
+    const daysRemainingOf = (debt: Debt): number =>
+      debt.deadline ? DebtDeadline.fromIsoDate(debt.deadline, referenceDate).daysRemainingCount() : Infinity;
+    return [...this.active()].sort((firstDebt, secondDebt) => daysRemainingOf(firstDebt) - daysRemainingOf(secondDebt));
   }
 
   settled(): Debt[] {

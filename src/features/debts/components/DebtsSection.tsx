@@ -6,6 +6,7 @@ import { currencyFormatter } from "@/lib/CurrencyFormatter";
 import { idGenerator } from "@/lib/IdGenerator";
 import type { Debt } from "@/shared/domain/types";
 import { DebtLedger } from "@/shared/domain/DebtLedger";
+import { DebtDeadline } from "@/shared/domain/DebtDeadline";
 import { Metric } from "@/shared/ui/Metric";
 
 export interface DebtsSectionProps {
@@ -22,6 +23,19 @@ function todayIsoDate(): string {
 
 function formatSettlementDate(isoDate: string): string {
   return new Date(isoDate).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" });
+}
+
+function DeadlineBadge({ deadlineIsoDate }: { deadlineIsoDate: string }): React.JSX.Element {
+  const deadline = DebtDeadline.fromIsoDate(deadlineIsoDate, new Date());
+  const color = deadline.isOverdue() ? palette.bad : deadline.isApproaching() ? palette.warn : palette.faint;
+  return (
+    <span
+      role="status"
+      style={{ fontSize: 11, fontWeight: 600, color, border: `1px solid ${color}`, borderRadius: 999, padding: "2px 8px", whiteSpace: "nowrap" }}
+    >
+      {deadline.label()}
+    </span>
+  );
 }
 
 export function DebtsSection({ debts, setDebts, portfolioTotal }: DebtsSectionProps): React.JSX.Element {
@@ -41,9 +55,10 @@ export function DebtsSection({ debts, setDebts, portfolioTotal }: DebtsSectionPr
 
   const hasUnsavedChanges = JSON.stringify(draftDebts) !== debtsSnapshot;
 
+  const referenceDate = new Date();
   const ledger = new DebtLedger(debts);
   const draftLedger = new DebtLedger(draftDebts);
-  const activeDebts = editing ? draftLedger.active() : ledger.active();
+  const activeDebts = editing ? draftLedger.activeSortedByDeadlineUrgency(referenceDate) : ledger.activeSortedByDeadlineUrgency(referenceDate);
   const settledDebts = editing ? draftLedger.settled() : ledger.settled();
   const totalSettledBalance = editing ? draftLedger.totalSettledBalance() : ledger.totalSettledBalance();
 
@@ -62,6 +77,8 @@ export function DebtsSection({ debts, setDebts, portfolioTotal }: DebtsSectionPr
     setDraftDebts(list => list.map(debt => (debt.id === id ? { ...debt, installment: parseFloat(value) || 0 } : debt)));
   const editDebtBalance = (id: string, value: string): void =>
     setDraftDebts(list => list.map(debt => (debt.id === id ? { ...debt, balance: parseFloat(value) || 0 } : debt)));
+  const editDebtDeadline = (id: string, value: string): void =>
+    setDraftDebts(list => list.map(debt => (debt.id === id ? { ...debt, deadline: value === "" ? undefined : value } : debt)));
   const settleDebt = (id: string): void =>
     setDraftDebts(list => new DebtLedger(list).settle(id, todayIsoDate()).all());
   const addDebt = (): void =>
@@ -108,9 +125,10 @@ export function DebtsSection({ debts, setDebts, portfolioTotal }: DebtsSectionPr
         <button
           className="eyebrow"
           onClick={() => setSectionOpen(previous => !previous)}
+          aria-expanded={sectionOpen}
           style={{ background: "none", border: "none", padding: 0, display: "flex", alignItems: "center", gap: 8 }}
         >
-          <span style={{ display: "inline-block", transition: ".15s", transform: sectionOpen ? "rotate(90deg)" : "rotate(0deg)" }}>▸</span>
+          <span aria-hidden="true" style={{ display: "inline-block", transition: ".15s", transform: sectionOpen ? "rotate(90deg)" : "rotate(0deg)" }}>▸</span>
           Deudas y patrimonio neto
         </button>
         <div className="num" style={{ fontSize: 12.5 }}>
@@ -139,7 +157,8 @@ export function DebtsSection({ debts, setDebts, portfolioTotal }: DebtsSectionPr
                       <div style={{ fontSize: 13.5, color: palette.ink }}>{debt.name}</div>
                       {debt.note && <div style={{ fontSize: 11.5, color: palette.faint, marginTop: 2 }}>{debt.note}</div>}
                     </div>
-                    <div className="num" style={{ display: "flex", gap: 16, fontSize: 12.5 }}>
+                    <div className="num" style={{ display: "flex", alignItems: "center", gap: 16, fontSize: 12.5 }}>
+                      {debt.deadline && <DeadlineBadge deadlineIsoDate={debt.deadline} />}
                       <span style={{ color: palette.sub }}>Cuota {currencyFormatter.euro(debt.installment)}/mes</span>
                       <span style={{ color: palette.ink, fontWeight: 600 }}>{currencyFormatter.euro(debt.balance)}</span>
                     </div>
@@ -174,6 +193,10 @@ export function DebtsSection({ debts, setDebts, portfolioTotal }: DebtsSectionPr
                       <div style={{ fontSize: 10.5, color: palette.faint, marginBottom: 2 }}>Saldo pendiente</div>
                       <input className="inp" type="number" step="any" value={debt.balance} onChange={(event: React.ChangeEvent<HTMLInputElement>) => editDebtBalance(debt.id, event.target.value)} />
                     </label>
+                    <label>
+                      <div style={{ fontSize: 10.5, color: palette.faint, marginBottom: 2 }}>Fecha límite</div>
+                      <input className="inp" type="date" value={debt.deadline ?? ""} onChange={(event: React.ChangeEvent<HTMLInputElement>) => editDebtDeadline(debt.id, event.target.value)} />
+                    </label>
                     <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
                       {pendingDeletionId !== debt.id && (
                         <button className="seg on" onClick={() => settleDebt(debt.id)} title="Marcar como liquidada">Liquidar</button>
@@ -198,9 +221,10 @@ export function DebtsSection({ debts, setDebts, portfolioTotal }: DebtsSectionPr
               <button
                 className="eyebrow"
                 onClick={() => setHistoryOpen(previous => !previous)}
+                aria-expanded={historyOpen}
                 style={{ background: "none", border: "none", padding: 0, display: "flex", alignItems: "center", gap: 8 }}
               >
-                <span style={{ display: "inline-block", transition: ".15s", transform: historyOpen ? "rotate(90deg)" : "rotate(0deg)" }}>▸</span>
+                <span aria-hidden="true" style={{ display: "inline-block", transition: ".15s", transform: historyOpen ? "rotate(90deg)" : "rotate(0deg)" }}>▸</span>
                 Deudas liquidadas ({settledDebts.length})
               </button>
               {settledDebts.length > 0 && (

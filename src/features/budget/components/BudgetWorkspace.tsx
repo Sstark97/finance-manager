@@ -137,7 +137,7 @@ export function BudgetWorkspace({ baseBudget, setBaseBudget, months, setMonths, 
                 <div key={item.id} className="gf-row" style={{ marginBottom:8 }}>
                   <input className="inp" value={item.name} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>editFixedExpense(item.id,"name",event.target.value)} style={{fontFamily:"'DM Sans',sans-serif"}} />
                   <input className="inp" type="number" step="any" value={item.amount} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>editFixedExpense(item.id,"amount",event.target.value)} />
-                  <button className="seg" onClick={()=>removeFixedExpense(item.id)} style={{ color:palette.bad }}>✕</button>
+                  <button className="seg" onClick={()=>removeFixedExpense(item.id)} aria-label={`Eliminar ${item.name}`} style={{ color:palette.bad }}>✕</button>
                 </div>
               ))}
               <div className="gf-row" style={{ marginTop:10 }}>

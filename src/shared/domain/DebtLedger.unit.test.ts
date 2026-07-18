@@ -94,4 +94,34 @@ describe("DebtLedger", () => {
 
     expect(ledger.all()).toEqual([carLoan]);
   });
+
+  describe("activeSortedByDeadlineUrgency", () => {
+    const referenceDate = new Date("2026-07-18T10:00:00Z");
+    const debtDueSoon: Debt = { id: "tarjeta", name: "Tarjeta", installment: 60, balance: 400, note: "", deadline: "2026-07-25" };
+    const debtDueLater: Debt = { id: "prestamo", name: "Préstamo", installment: 90, balance: 2000, note: "", deadline: "2026-12-01" };
+    const debtWithoutDeadline: Debt = { id: "amigo", name: "Amigo", installment: 30, balance: 150, note: "" };
+
+    it("should order active debts from the closest deadline to the farthest", () => {
+      const ledger = new DebtLedger([debtWithoutDeadline, debtDueLater, debtDueSoon]);
+
+      expect(ledger.activeSortedByDeadlineUrgency(referenceDate).map((debt) => debt.id)).toEqual([
+        debtDueSoon.id, debtDueLater.id, debtWithoutDeadline.id,
+      ]);
+    });
+
+    it("should exclude settled debts even when they have the closest deadline", () => {
+      const settledUrgentDebt: Debt = { ...debtDueSoon, settledAt: "2026-07-01" };
+      const ledger = new DebtLedger([settledUrgentDebt, debtDueLater]);
+
+      expect(ledger.activeSortedByDeadlineUrgency(referenceDate).map((debt) => debt.id)).toEqual([debtDueLater.id]);
+    });
+
+    it("should not mutate the original ledger order when sorting by deadline urgency", () => {
+      const ledger = new DebtLedger([debtDueLater, debtDueSoon]);
+
+      ledger.activeSortedByDeadlineUrgency(referenceDate);
+
+      expect(ledger.active().map((debt) => debt.id)).toEqual([debtDueLater.id, debtDueSoon.id]);
+    });
+  });
 });

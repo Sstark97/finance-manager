@@ -4,7 +4,6 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { GoalsTab, type GoalsTabProps } from "@/features/goals/components/GoalsTab";
 import type { GoalsSettings } from "@/features/goals/application/GoalsSettings";
-import type { Debt } from "@/shared/domain/types";
 import { PortfolioCalculator } from "@/features/wealth/domain/PortfolioCalculator";
 import type { WealthTargets } from "@/features/wealth/domain/WealthTargets";
 import { WEALTH_TARGETS_INITIAL } from "@/features/wealth/data/wealthTargets";
@@ -17,22 +16,19 @@ const SAMPLE_SETTINGS: GoalsSettings = {
   btcConditions: { disposable: true, dcaActive: true },
 };
 
-function renderGoalsTab(overrides: Partial<Pick<GoalsTabProps, "settings" | "debts" | "wealthTargets">> = {}) {
-  const setDebts = vi.fn();
+function renderGoalsTab(overrides: Partial<Pick<GoalsTabProps, "settings" | "wealthTargets">> = {}) {
   const setSettings = vi.fn();
 
   const view = render(
     <GoalsTab
       portfolioDerived={portfolioDerived}
-      debts={overrides.debts ?? []}
-      setDebts={setDebts}
       settings={overrides.settings ?? null}
       setSettings={setSettings}
       wealthTargets={overrides.wealthTargets ?? null}
     />,
   );
 
-  return { setDebts, setSettings, container: view.container };
+  return { setSettings, container: view.container };
 }
 
 describe("GoalsTab", () => {
@@ -68,27 +64,22 @@ describe("GoalsTab", () => {
     expect(screen.getByText("Libertad financiera")).toBeInTheDocument();
   });
 
-  it("should render the collapsed debts section without exposing debt inputs directly", () => {
-    const debt: Debt = { id: "coche", name: "Coche", installment: 173.28, balance: 8000, note: "En curso" };
-
-    renderGoalsTab({ settings: SAMPLE_SETTINGS, debts: [debt] });
-
-    expect(screen.getByText("Deudas y patrimonio neto")).toBeInTheDocument();
-    expect(screen.queryByDisplayValue("Coche")).not.toBeInTheDocument();
-  });
-
   it("should not show a checkbox to count the car as an asset, since that concept no longer exists", () => {
-    renderGoalsTab({ settings: SAMPLE_SETTINGS, debts: [] });
+    renderGoalsTab({ settings: SAMPLE_SETTINGS });
 
     expect(screen.queryByText(/Contar el coche como activo/)).not.toBeInTheDocument();
   });
 
   it("should not show the hardcoded Apple Watch banner", () => {
-    const debt: Debt = { id: "applewatch", name: "Apple Watch", installment: 50, balance: 200, note: "", deadline: "2026-07-10" };
-
-    renderGoalsTab({ settings: SAMPLE_SETTINGS, debts: [debt] });
+    renderGoalsTab({ settings: SAMPLE_SETTINGS });
 
     expect(screen.queryByText(/Liquidar Apple Watch/)).not.toBeInTheDocument();
+  });
+
+  it("should not render the debts section, since debts now live in their own tab", () => {
+    renderGoalsTab({ settings: SAMPLE_SETTINGS });
+
+    expect(screen.queryByText("Deudas y patrimonio neto")).not.toBeInTheDocument();
   });
 
   it("should fall back to the default wealth targets for the emergency fund card when none are configured", () => {

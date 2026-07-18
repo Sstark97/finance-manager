@@ -1,0 +1,86 @@
+// @vitest-environment jsdom
+import React from "react";
+import { describe, expect, it, vi, beforeEach } from "vitest";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { FinanceAppShell, type FinanceAppShellProps } from "@/app/FinanceAppShell";
+import { browserFileDownloader } from "@/shared/infrastructure/BrowserFileDownloader";
+
+vi.mock("@/app/actions/savePortfolio", () => ({ savePortfolio: vi.fn().mockResolvedValue(undefined) }));
+vi.mock("@/app/actions/saveDebts", () => ({ saveDebts: vi.fn().mockResolvedValue(undefined) }));
+vi.mock("@/app/actions/saveBudget", () => ({ saveBudget: vi.fn().mockResolvedValue(undefined) }));
+vi.mock("@/app/actions/saveGoalsSettings", () => ({ saveGoalsSettings: vi.fn().mockResolvedValue(undefined) }));
+vi.mock("@/app/actions/saveWealthTargets", () => ({ saveWealthTargets: vi.fn().mockResolvedValue(undefined) }));
+vi.mock("@/app/actions/authSession", () => ({ signOutAction: vi.fn().mockResolvedValue(undefined) }));
+vi.mock("@/shared/infrastructure/BrowserFileDownloader", () => ({ browserFileDownloader: { download: vi.fn() } }));
+
+const BASE_PROPS: FinanceAppShellProps = {
+  currentUserEmail: "owner@example.com",
+  initialPortfolio: [],
+  initialDebts: [],
+  initialBaseBudget: null,
+  initialFixedExpenseItems: [],
+  initialMonths: [],
+  initialGoalsSettings: null,
+  initialWealthTargets: null,
+};
+
+beforeEach(() => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false } as Response));
+  vi.clearAllMocks();
+});
+
+describe("FinanceAppShell", () => {
+  it("should offer a dedicated Deudas tab alongside Patrimonio, Presupuesto and Metas", () => {
+    render(<FinanceAppShell {...BASE_PROPS} />);
+
+    expect(screen.getByRole("tab", { name: "Deudas" })).toBeInTheDocument();
+  });
+
+  it("should render the debts section and update the heading once the Deudas tab is selected", async () => {
+    const debt = { id: "coche", name: "Coche", installment: 173.28, balance: 8000, note: "" };
+    const user = userEvent.setup();
+    render(<FinanceAppShell {...BASE_PROPS} initialDebts={[debt]} />);
+
+    await user.click(screen.getByRole("tab", { name: "Deudas" }));
+
+    expect(screen.getByRole("heading", { name: "Deudas" })).toBeInTheDocument();
+    expect(screen.getByText("Deudas y patrimonio neto")).toBeInTheDocument();
+  });
+
+  it("should mark the active tab as selected for assistive technology", async () => {
+    const user = userEvent.setup();
+    render(<FinanceAppShell {...BASE_PROPS} />);
+
+    expect(screen.getByRole("tab", { name: "Patrimonio" })).toHaveAttribute("aria-selected", "true");
+
+    await user.click(screen.getByRole("tab", { name: "Presupuesto" }));
+
+    expect(screen.getByRole("tab", { name: "Presupuesto" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "Patrimonio" })).toHaveAttribute("aria-selected", "false");
+  });
+
+  it("should expose the tab content inside a single main landmark", () => {
+    render(<FinanceAppShell {...BASE_PROPS} />);
+
+    expect(screen.getByRole("main")).toBeInTheDocument();
+  });
+
+  it("should download a JSON file with the current app state when Exportar JSON is pressed", async () => {
+    const user = userEvent.setup();
+    render(<FinanceAppShell {...BASE_PROPS} />);
+
+    await user.click(screen.getByRole("button", { name: "Exportar JSON" }));
+
+    expect(browserFileDownloader.download).toHaveBeenCalledWith("finanzas.json", expect.any(String), "application/json");
+  });
+
+  it("should download a CSV file with the current app state when Exportar CSV is pressed", async () => {
+    const user = userEvent.setup();
+    render(<FinanceAppShell {...BASE_PROPS} />);
+
+    await user.click(screen.getByRole("button", { name: "Exportar CSV" }));
+
+    expect(browserFileDownloader.download).toHaveBeenCalledWith("finanzas.csv", expect.any(String), "text/csv");
+  });
+});

@@ -12,6 +12,7 @@ import type { Position, PortfolioHistoryPoint, PositionType, CompositionItem, Eq
 import { COMPOSITIONS } from "@/features/wealth/domain/config";
 import type { WealthTargets } from "@/features/wealth/domain/WealthTargets";
 import type { PortfolioDerived } from "@/features/wealth/domain/PortfolioCalculator";
+import { wealthThresholdEvaluator } from "@/features/wealth/domain/WealthThresholdEvaluator";
 import type { HistoryRange } from "@/features/wealth/domain/HistoryRange";
 import type { PositionPricingResult } from "@/features/wealth/application/RefreshPositionPrices";
 import type { PortfolioHistoryResult } from "@/features/wealth/application/ComputePortfolioHistory";
@@ -69,17 +70,18 @@ export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts, we
   const totalDebt = new DebtLedger(debts).totalActiveBalance();
   const netWorth = total - totalDebt;
 
-  const alerts: Alert[] = wealthTargets == null ? [] : ((targets: WealthTargets): Alert[] => {
+  const thresholdStatus = wealthTargets == null ? null : wealthThresholdEvaluator.evaluate(portfolioDerived, wealthTargets);
+
+  const alerts: Alert[] = wealthTargets == null || thresholdStatus == null ? [] : ((targets: WealthTargets): Alert[] => {
     const list: Alert[] = [];
-    if (liquidityTotal < targets.minimumFund)
+    if (thresholdStatus.isEmergencyFundBelowMinimum)
       list.push({ kind:"warn", message:`Fondo de emergencia por debajo del mínimo de ${currencyFormatter.euro(targets.minimumFund)}. Es la prioridad.` });
-    if (btcWeightTotal > targets.btcSellWeight && total > targets.btcSellCapital)
+    if (thresholdStatus.isBitcoinAtSellThreshold)
       list.push({ kind:"bad", message:`BTC supera el ${targets.btcSellWeight}% con cartera >${currencyFormatter.euro(targets.btcSellCapital)}: toca venta parcial hasta el 30%.` });
-    else if (btcWeightTotal > targets.btcPauseWeight && total > targets.btcPauseCapital)
+    else if (thresholdStatus.isBitcoinAtPauseThreshold)
       list.push({ kind:"warn", message:`BTC supera el ${targets.btcPauseWeight}% con cartera >${currencyFormatter.euro(targets.btcPauseCapital)}: pausar aportaciones de BTC.` });
-    const worldWeightDeviation = Math.abs(equityWeightOf("world") - targets.equityTargets.world);
-    if (equity && worldWeightDeviation > 8) list.push({ kind:"warn", message:`World desviado ${worldWeightDeviation.toFixed(0)} pts del objetivo ${targets.equityTargets.world}%. El DCA lo corrige.` });
-    if (liquidityTotal >= targets.emergencyFund)
+    if (thresholdStatus.isWorldWeightDeviated) list.push({ kind:"warn", message:`World desviado ${thresholdStatus.worldWeightDeviation.toFixed(0)} pts del objetivo ${targets.equityTargets.world}%. El DCA lo corrige.` });
+    if (thresholdStatus.isEmergencyFundComplete)
       list.push({ kind:"good", message:`Fondo de emergencia completo (${currencyFormatter.euro(targets.emergencyFund)}). Replantea virar a inversión.` });
     if (list.length === 0) list.push({ kind:"good", message:"Todo dentro de plan. Sigue con el DCA." });
     return list;
@@ -238,8 +240,18 @@ export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts, we
         </div>
         <div style={{ display:"flex", gap:28, flexWrap:"wrap" }}>
           <Metric label="Invertido" value={currencyFormatter.euro(invested)} sub={`${currencyFormatter.percent(total?invested/total*100:0)} del total`} />
-          <Metric label="Liquidez" value={currencyFormatter.euro(liquidityTotal)} sub={`${currencyFormatter.percent(total?liquidityTotal/total*100:0)} del total`} />
-          <Metric label="Bitcoin" value={currencyFormatter.euro(btcTotal)} sub={`${currencyFormatter.percent(btcWeightTotal)} del total`} />
+          <Metric
+            label="Liquidez"
+            value={currencyFormatter.euro(liquidityTotal)}
+            sub={thresholdStatus?.isEmergencyFundBelowMinimum ? "por debajo del mínimo" : `${currencyFormatter.percent(total?liquidityTotal/total*100:0)} del total`}
+            valueColor={thresholdStatus?.isEmergencyFundBelowMinimum ? palette.bad : undefined}
+          />
+          <Metric
+            label="Bitcoin"
+            value={currencyFormatter.euro(btcTotal)}
+            sub={thresholdStatus?.isBitcoinAtSellThreshold ? "supera el umbral de venta" : thresholdStatus?.isBitcoinAtPauseThreshold ? "supera el umbral de pausa" : `${currencyFormatter.percent(btcWeightTotal)} del total`}
+            valueColor={thresholdStatus?.isBitcoinAtSellThreshold ? palette.bad : thresholdStatus?.isBitcoinAtPauseThreshold ? palette.warn : undefined}
+          />
         </div>
       </div>
 
@@ -281,7 +293,7 @@ export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts, we
                       </label>
                     </>
                   )}
-                  <button className="seg" onClick={() => removePosition(position.id)} title="Borrar posición" style={{ color:palette.bad, height:38 }}>✕</button>
+                  <button className="seg" onClick={() => removePosition(position.id)} title="Borrar posición" aria-label={`Borrar posición ${position.name}`} style={{ color:palette.bad, height:38 }}>✕</button>
                 </div>
                 {position.type !== "efectivo" && (
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginTop:10, paddingTop:10, borderTop:`1px solid ${palette.line}`, flexWrap:"wrap", gap:8 }}>
@@ -520,7 +532,14 @@ export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts, we
               </div>
               <div style={{ height:10, background:palette.panel2, borderRadius:6, overflow:"hidden", margin:"14px 0 10px", position:"relative" }}>
                 <div style={{ position:"absolute", left:`${wealthTargets.minimumFund/wealthTargets.emergencyFund*100}%`, top:0, bottom:0, width:2, background:palette.ink, opacity:.5, zIndex:2 }} />
-                <div style={{ height:"100%", width:`${Math.min(100,liquidityTotal/wealthTargets.emergencyFund*100)}%`, background:`linear-gradient(90deg,${palette.faint},${palette.acc})`, borderRadius:6 }} />
+                <div
+                  role="status"
+                  aria-label={thresholdStatus?.isEmergencyFundBelowMinimum ? "Fondo de emergencia por debajo del mínimo" : thresholdStatus?.isEmergencyFundComplete ? "Fondo de emergencia completo" : "Fondo de emergencia en progreso"}
+                  style={{
+                    height:"100%", width:`${Math.min(100,liquidityTotal/wealthTargets.emergencyFund*100)}%`, borderRadius:6,
+                    background: thresholdStatus?.isEmergencyFundBelowMinimum ? palette.bad : `linear-gradient(90deg,${palette.faint},${palette.acc})`,
+                  }}
+                />
               </div>
               <div style={{ fontSize:12, color:palette.sub }}>
                 {liquidityTotal < wealthTargets.minimumFund

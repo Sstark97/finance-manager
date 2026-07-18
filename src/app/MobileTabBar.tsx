@@ -17,16 +17,19 @@ export interface MobileTabBarProps<TabId extends string> {
 
 export function MobileTabBar<TabId extends string>({ items, activeTabId, onSelect }: MobileTabBarProps<TabId>): React.JSX.Element {
   return (
-    <nav className="mobile-tabbar">
+    <nav className="mobile-tabbar" role="tablist" aria-label="Navegación principal">
       {items.map(item => {
         const isActive = item.id === activeTabId;
         const color = isActive ? palette.acc : palette.faint;
         return (
           <button
             key={item.id}
+            id={`mobile-tab-${item.id}`}
+            role="tab"
+            aria-controls="finance-tabpanel"
             className={`mobile-tabbar-btn ${isActive ? "on" : ""}`}
             onClick={() => onSelect(item.id)}
-            aria-current={isActive ? "page" : undefined}
+            aria-selected={isActive}
           >
             {item.icon(color)}
             <span style={{ color }}>{item.label}</span>
@@ -66,6 +69,16 @@ export function GoalsIcon(color: string): React.ReactNode {
       <circle cx="12" cy="12" r="8.25" />
       <circle cx="12" cy="12" r="4.25" />
       <circle cx="12" cy="12" r="0.75" fill={color} stroke="none" />
+    </svg>
+  );
+}
+
+export function DebtsIcon(color: string): React.ReactNode {
+  return (
+    <svg {...iconStrokeProps(color)}>
+      <rect x="3" y="6" width="18" height="13" rx="2" />
+      <path d="M3 10.5h18" />
+      <path d="M7 15h4" />
     </svg>
   );
 }

@@ -12,6 +12,7 @@ import type { CategoryId, EventCategory, Month, Budget } from "@/features/budget
 import { monthAvailability } from "@/features/budget/domain/MonthAvailability";
 import { CATEGORIES, CATEGORY_LABEL } from "@/features/budget/domain/config";
 import { monthlyBudgetCalculator } from "@/features/budget/domain/MonthlyBudgetCalculator";
+import { MonthlyRecapCard } from "@/features/budget/components/MonthlyRecapCard";
 
 export interface BudgetMonthlyBreakdownProps {
   baseBudget: Budget;
@@ -115,10 +116,12 @@ export function BudgetMonthlyBreakdown({ baseBudget, months, setMonths }: Budget
         </div>
       </div>
 
+      <MonthlyRecapCard month={month} months={months} baseBudget={baseBudget} />
+
       <div className="card span-full">
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:10 }}>
-          <button className="eyebrow" onClick={()=>setBreakdownOpen(previous=>!previous)} style={{ background:"none", border:"none", padding:0, display:"flex", alignItems:"center", gap:8 }}>
-            <span style={{ display:"inline-block", transition:".15s", transform: breakdownOpen?"rotate(90deg)":"rotate(0deg)" }}>▸</span>
+          <button className="eyebrow" onClick={()=>setBreakdownOpen(previous=>!previous)} aria-expanded={breakdownOpen} style={{ background:"none", border:"none", padding:0, display:"flex", alignItems:"center", gap:8 }}>
+            <span aria-hidden="true" style={{ display:"inline-block", transition:".15s", transform: breakdownOpen?"rotate(90deg)":"rotate(0deg)" }}>▸</span>
             {month.label} · desglose
           </button>
           <div className="num" style={{ fontSize:12.5 }}>
@@ -180,7 +183,7 @@ export function BudgetMonthlyBreakdown({ baseBudget, months, setMonths }: Budget
             <span style={{ color:palette.ink }}>{event.name} <span style={{ color:palette.faint }}>({CATEGORY_LABEL[event.category] || event.category})</span></span>
             <span style={{ display:"flex", alignItems:"center", gap:8 }}>
               <span className="num" style={{ color:palette.warn }}>+{currencyFormatter.euroWithCents(event.amount)}</span>
-              <button className="seg" onClick={()=>removeEvent(event.id)} style={{ color:palette.bad, padding:"3px 8px" }}>✕</button>
+              <button className="seg" onClick={()=>removeEvent(event.id)} aria-label={`Eliminar ${event.name}`} style={{ color:palette.bad, padding:"3px 8px" }}>✕</button>
             </span>
           </div>
         ))}

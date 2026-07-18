@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { DebtsSection } from "@/features/goals/components/DebtsSection";
+import { DebtsSection } from "@/features/debts/components/DebtsSection";
 import type { Debt } from "@/shared/domain/types";
 import { currencyFormatter } from "@/lib/CurrencyFormatter";
 
@@ -279,5 +279,63 @@ describe("DebtsSection", () => {
 
     await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
     expect(setDebtsSpy).toHaveBeenCalledWith([]);
+  });
+
+  it("should show a deadline badge next to an active debt that has a deadline", async () => {
+    const debtDueSoon: Debt = { ...SAMPLE_DEBT, deadline: "2999-01-15" };
+    renderDebtsSection([debtDueSoon]);
+    await openSection();
+
+    expect(screen.getByRole("status")).toHaveTextContent(/Vence en \d+ días/);
+  });
+
+  it("should not show a deadline badge for an active debt without a deadline", async () => {
+    renderDebtsSection([SAMPLE_DEBT]);
+    await openSection();
+
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("should list the debt with the closest deadline first", async () => {
+    const debtDueSoon: Debt = { id: "urgente", name: "Urgente", installment: 10, balance: 100, note: "", deadline: "2999-01-01" };
+    const debtDueLater: Debt = { id: "lejana", name: "Lejana", installment: 10, balance: 100, note: "", deadline: "2999-12-01" };
+    renderDebtsSection([debtDueLater, debtDueSoon]);
+    await openSection();
+
+    const debtNames = screen.getAllByText(/Urgente|Lejana/).map(element => element.textContent);
+    expect(debtNames).toEqual(["Urgente", "Lejana"]);
+  });
+
+  it("should expose a date input to set a debt's deadline while editing", async () => {
+    renderDebtsSection();
+    await openSection();
+    await enterEditMode();
+
+    const deadlineInput = screen.getByLabelText("Fecha límite") as HTMLInputElement;
+    expect(deadlineInput).toHaveAttribute("type", "date");
+    expect(deadlineInput.value).toBe("");
+  });
+
+  it("should persist the deadline entered in edit mode once saved", async () => {
+    const { setDebtsSpy } = renderDebtsSection();
+    await openSection();
+    await enterEditMode();
+
+    const user = userEvent.setup();
+    const deadlineInput = screen.getByLabelText("Fecha límite");
+    await user.type(deadlineInput, "2026-12-01");
+    await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+    expect(setDebtsSpy).toHaveBeenCalledWith([{ ...SAMPLE_DEBT, deadline: "2026-12-01" }]);
+  });
+
+  it("should announce the collapsed and expanded state of the debts section for assistive technology", async () => {
+    renderDebtsSection();
+
+    expect(screen.getByRole("button", { name: /Deudas y patrimonio neto/ })).toHaveAttribute("aria-expanded", "false");
+
+    await openSection();
+
+    expect(screen.getByRole("button", { name: /Deudas y patrimonio neto/ })).toHaveAttribute("aria-expanded", "true");
   });
 });
