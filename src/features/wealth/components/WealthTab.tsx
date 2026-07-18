@@ -56,7 +56,7 @@ export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts, we
   const [loadingPrices, setLoadingPrices] = useState<boolean>(false);
   const [priceRefreshWarning, setPriceRefreshWarning] = useState<string | null>(null);
   const [history, setHistory] = useState<PortfolioHistoryPoint[]>([]);
-  const [historyRange, setHistoryRange] = useState<HistoryRange>("1m");
+  const [historyRange, setHistoryRange] = useState<HistoryRange>("ytd");
   const [loadingHistory, setLoadingHistory] = useState<boolean>(false);
   const [historyWarning, setHistoryWarning] = useState<string | null>(null);
 

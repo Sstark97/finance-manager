@@ -25,7 +25,7 @@ function renderDebtsSection(initialDebts: Debt[] = [SAMPLE_DEBT]) {
   return { setDebtsSpy, container: view.container };
 }
 
-async function openSection(): Promise<void> {
+async function toggleSection(): Promise<void> {
   const user = userEvent.setup();
   await user.click(screen.getByRole("button", { name: /Deudas y patrimonio neto/ }));
 }
@@ -41,16 +41,23 @@ async function openHistory(): Promise<void> {
 }
 
 describe("DebtsSection", () => {
-  it("should keep the debts detail out of the document until the header is opened", () => {
+  it("should show the active debts detail immediately since the section starts expanded", () => {
     renderDebtsSection();
+
+    expect(screen.getByText(SAMPLE_DEBT.name)).toBeInTheDocument();
+  });
+
+  it("should hide the debts detail once the section header is collapsed", async () => {
+    renderDebtsSection();
+
+    await toggleSection();
 
     expect(screen.queryByText(SAMPLE_DEBT.name)).not.toBeInTheDocument();
     expect(screen.queryByDisplayValue(SAMPLE_DEBT.name)).not.toBeInTheDocument();
   });
 
-  it("should show a read-only view with no debt inputs or destructive buttons by default once opened", async () => {
+  it("should show a read-only view with no debt inputs or destructive buttons by default", () => {
     renderDebtsSection();
-    await openSection();
 
     const debtNameElement = screen.getByText(SAMPLE_DEBT.name);
     const debtRow = debtNameElement.parentElement!.parentElement as HTMLElement;
@@ -63,7 +70,6 @@ describe("DebtsSection", () => {
 
   it("should reveal the debt inputs once edit mode is explicitly entered", async () => {
     renderDebtsSection();
-    await openSection();
     await enterEditMode();
 
     expect(screen.getByRole("textbox", { name: "Nombre" })).toBeInTheDocument();
@@ -73,7 +79,6 @@ describe("DebtsSection", () => {
 
   it("should not call setDebts while editing a balance in the draft", async () => {
     const { setDebtsSpy } = renderDebtsSection();
-    await openSection();
     await enterEditMode();
 
     const user = userEvent.setup();
@@ -87,7 +92,6 @@ describe("DebtsSection", () => {
 
   it("should apply the draft to setDebts exactly once when Guardar cambios is pressed, and disable it without changes", async () => {
     const { setDebtsSpy } = renderDebtsSection();
-    await openSection();
     await enterEditMode();
 
     expect(screen.getByRole("button", { name: "Guardar cambios" })).toBeDisabled();
@@ -107,7 +111,6 @@ describe("DebtsSection", () => {
 
   it("should show a saved confirmation after Guardar cambios, even though edit mode closes", async () => {
     renderDebtsSection();
-    await openSection();
     await enterEditMode();
 
     const user = userEvent.setup();
@@ -122,7 +125,6 @@ describe("DebtsSection", () => {
 
   it("should revert the draft without calling setDebts when Descartar is pressed", async () => {
     const { setDebtsSpy } = renderDebtsSection();
-    await openSection();
     await enterEditMode();
 
     const user = userEvent.setup();
@@ -139,7 +141,6 @@ describe("DebtsSection", () => {
 
   it("should not call setDebts when adding a debt to the draft until Guardar cambios is pressed", async () => {
     const { setDebtsSpy } = renderDebtsSection([]);
-    await openSection();
     await enterEditMode();
 
     const user = userEvent.setup();
@@ -156,7 +157,6 @@ describe("DebtsSection", () => {
 
   it("should move a settled debt out of the active draft and into the history as soon as Liquidar is pressed", async () => {
     const { setDebtsSpy } = renderDebtsSection();
-    await openSection();
     await enterEditMode();
 
     const user = userEvent.setup();
@@ -171,7 +171,6 @@ describe("DebtsSection", () => {
 
   it("should persist the settlement date only once Guardar cambios is pressed", async () => {
     const { setDebtsSpy } = renderDebtsSection();
-    await openSection();
     await enterEditMode();
 
     const user = userEvent.setup();
@@ -184,9 +183,8 @@ describe("DebtsSection", () => {
     ]);
   });
 
-  it("should exclude settled debts from the total debt shown once the section is open", async () => {
+  it("should exclude settled debts from the total debt shown", () => {
     renderDebtsSection([SAMPLE_DEBT, SETTLED_DEBT]);
-    await openSection();
 
     const totalDebtLabel = screen.getByText("Deuda total:");
     const totalDebtRow = totalDebtLabel.parentElement as HTMLElement;
@@ -194,16 +192,14 @@ describe("DebtsSection", () => {
     expect(within(totalDebtRow).getByText((_text, element) => element?.textContent === expectedBalanceText)).toBeInTheDocument();
   });
 
-  it("should keep the settled-debts history collapsed by default, even when settled debts exist", async () => {
+  it("should keep the settled-debts history collapsed by default, even when settled debts exist", () => {
     renderDebtsSection([SAMPLE_DEBT, SETTLED_DEBT]);
-    await openSection();
 
     expect(screen.queryByText(SETTLED_DEBT.name)).not.toBeInTheDocument();
   });
 
   it("should reveal the settled-debts history once its own toggle is opened, and hide it again when toggled off", async () => {
     renderDebtsSection([SAMPLE_DEBT, SETTLED_DEBT]);
-    await openSection();
 
     await openHistory();
     expect(screen.getByText(SETTLED_DEBT.name)).toBeInTheDocument();
@@ -214,7 +210,6 @@ describe("DebtsSection", () => {
 
   it("should show an empty-state message in the history when no debt has been settled yet", async () => {
     renderDebtsSection([SAMPLE_DEBT]);
-    await openSection();
     await openHistory();
 
     expect(screen.getByText("Aún no has liquidado deudas.")).toBeInTheDocument();
@@ -222,7 +217,6 @@ describe("DebtsSection", () => {
 
   it("should require a confirmation step before removing an active debt, and not call setDebts on the first click", async () => {
     const { setDebtsSpy } = renderDebtsSection();
-    await openSection();
     await enterEditMode();
 
     const user = userEvent.setup();
@@ -235,7 +229,6 @@ describe("DebtsSection", () => {
 
   it("should cancel the pending deletion without removing the debt when Cancelar is pressed", async () => {
     renderDebtsSection();
-    await openSection();
     await enterEditMode();
 
     const user = userEvent.setup();
@@ -248,7 +241,6 @@ describe("DebtsSection", () => {
 
   it("should remove the debt from the draft only after the deletion is confirmed with Sí", async () => {
     const { setDebtsSpy } = renderDebtsSection();
-    await openSection();
     await enterEditMode();
 
     const user = userEvent.setup();
@@ -266,7 +258,6 @@ describe("DebtsSection", () => {
 
   it("should allow permanently deleting an already settled debt from the history, with the same two-step confirmation", async () => {
     const { setDebtsSpy } = renderDebtsSection([SETTLED_DEBT]);
-    await openSection();
     await enterEditMode();
     await openHistory();
 
@@ -281,26 +272,23 @@ describe("DebtsSection", () => {
     expect(setDebtsSpy).toHaveBeenCalledWith([]);
   });
 
-  it("should show a deadline badge next to an active debt that has a deadline", async () => {
+  it("should show a deadline badge next to an active debt that has a deadline", () => {
     const debtDueSoon: Debt = { ...SAMPLE_DEBT, deadline: "2999-01-15" };
     renderDebtsSection([debtDueSoon]);
-    await openSection();
 
     expect(screen.getByRole("status")).toHaveTextContent(/Vence en \d+ días/);
   });
 
-  it("should not show a deadline badge for an active debt without a deadline", async () => {
+  it("should not show a deadline badge for an active debt without a deadline", () => {
     renderDebtsSection([SAMPLE_DEBT]);
-    await openSection();
 
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 
-  it("should list the debt with the closest deadline first", async () => {
+  it("should list the debt with the closest deadline first", () => {
     const debtDueSoon: Debt = { id: "urgente", name: "Urgente", installment: 10, balance: 100, note: "", deadline: "2999-01-01" };
     const debtDueLater: Debt = { id: "lejana", name: "Lejana", installment: 10, balance: 100, note: "", deadline: "2999-12-01" };
     renderDebtsSection([debtDueLater, debtDueSoon]);
-    await openSection();
 
     const debtNames = screen.getAllByText(/Urgente|Lejana/).map(element => element.textContent);
     expect(debtNames).toEqual(["Urgente", "Lejana"]);
@@ -308,7 +296,6 @@ describe("DebtsSection", () => {
 
   it("should expose a date input to set a debt's deadline while editing", async () => {
     renderDebtsSection();
-    await openSection();
     await enterEditMode();
 
     const deadlineInput = screen.getByLabelText("Fecha límite") as HTMLInputElement;
@@ -318,7 +305,6 @@ describe("DebtsSection", () => {
 
   it("should persist the deadline entered in edit mode once saved", async () => {
     const { setDebtsSpy } = renderDebtsSection();
-    await openSection();
     await enterEditMode();
 
     const user = userEvent.setup();
@@ -329,13 +315,13 @@ describe("DebtsSection", () => {
     expect(setDebtsSpy).toHaveBeenCalledWith([{ ...SAMPLE_DEBT, deadline: "2026-12-01" }]);
   });
 
-  it("should announce the collapsed and expanded state of the debts section for assistive technology", async () => {
+  it("should announce the debts section as expanded by default, and collapsed once toggled", async () => {
     renderDebtsSection();
 
-    expect(screen.getByRole("button", { name: /Deudas y patrimonio neto/ })).toHaveAttribute("aria-expanded", "false");
-
-    await openSection();
-
     expect(screen.getByRole("button", { name: /Deudas y patrimonio neto/ })).toHaveAttribute("aria-expanded", "true");
+
+    await toggleSection();
+
+    expect(screen.getByRole("button", { name: /Deudas y patrimonio neto/ })).toHaveAttribute("aria-expanded", "false");
   });
 });

@@ -39,7 +39,7 @@ function DeadlineBadge({ deadlineIsoDate }: { deadlineIsoDate: string }): React.
 }
 
 export function DebtsSection({ debts, setDebts, portfolioTotal }: DebtsSectionProps): React.JSX.Element {
-  const [sectionOpen, setSectionOpen] = useState<boolean>(false);
+  const [sectionOpen, setSectionOpen] = useState<boolean>(true);
   const [editing, setEditing] = useState<boolean>(false);
   const [draftDebts, setDraftDebts] = useState<Debt[]>(debts);
   const [syncedDebtsSnapshot, setSyncedDebtsSnapshot] = useState<string>(JSON.stringify(debts));

@@ -30,6 +30,28 @@ describe("DashboardSummaryCalculator", () => {
     expect(summary.netWorth.netWorth).toBe(portfolioDerived.total);
   });
 
+  it("should not subtract a long-term debt from the headline net worth", () => {
+    const portfolioDerived = portfolioCalculator.derive([CASH_POSITION]);
+    const farAwayDeadline = new Date();
+    farAwayDeadline.setDate(farAwayDeadline.getDate() + 400);
+    const mortgage: Debt = { id: "hipoteca", name: "Hipoteca", installment: 600, balance: 150000, note: "", deadline: farAwayDeadline.toISOString().slice(0, 10) };
+
+    const summary = calculator.summarize(portfolioDerived, [mortgage], null, [], null, null);
+
+    expect(summary.netWorth.netWorth).toBe(portfolioDerived.total);
+  });
+
+  it("should still reflect a long-term debt in the net worth including all debt", () => {
+    const portfolioDerived = portfolioCalculator.derive([CASH_POSITION]);
+    const farAwayDeadline = new Date();
+    farAwayDeadline.setDate(farAwayDeadline.getDate() + 400);
+    const mortgage: Debt = { id: "hipoteca", name: "Hipoteca", installment: 600, balance: 150000, note: "", deadline: farAwayDeadline.toISOString().slice(0, 10) };
+
+    const summary = calculator.summarize(portfolioDerived, [mortgage], null, [], null, null);
+
+    expect(summary.netWorth.netWorthIncludingAllDebt).toBe(portfolioDerived.total - mortgage.balance);
+  });
+
   it("should have no monthly result when there is no base budget yet", () => {
     const portfolioDerived = portfolioCalculator.derive([]);
 

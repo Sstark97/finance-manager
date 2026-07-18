@@ -24,6 +24,12 @@ function netWorthCardHeadline(): HTMLElement {
   return card.querySelector(".disp") as HTMLElement;
 }
 
+function farAwayDeadlineIsoDate(): string {
+  const deadline = new Date();
+  deadline.setDate(deadline.getDate() + 400);
+  return deadline.toISOString().slice(0, 10);
+}
+
 describe("DashboardTab", () => {
   it("should show the net worth as the portfolio total minus the active debt balance", () => {
     const portfolioDerived = portfolioCalculator.derive([CASH_POSITION, FUND_POSITION]);
@@ -61,7 +67,7 @@ describe("DashboardTab", () => {
       <DashboardTab portfolioDerived={portfolioDerived} debts={[]} baseBudget={null} months={[]} goalsSettings={null} wealthTargets={null} />,
     );
 
-    expect(screen.getByText(/Configura tu presupuesto/)).toBeInTheDocument();
+    expect(screen.getByText("Configura tu presupuesto en la pestaña Presupuesto para ver el flujo de este mes.")).toBeInTheDocument();
   });
 
   it("should show the monthly surplus once a month has been registered", () => {
@@ -78,5 +84,81 @@ describe("DashboardTab", () => {
     const expectedTotalBudgeted = SAMPLE_BUDGET.gastosFijos + SAMPLE_BUDGET.inversion + SAMPLE_BUDGET.fondoEmergencia + SAMPLE_BUDGET.ocio + SAMPLE_BUDGET.caprichos;
     const expectedSurplus = SAMPLE_BUDGET.ingresoNeto - expectedTotalBudgeted;
     expect(getByExactText(currencyFormatter.euroWithCents(expectedSurplus))).toBeInTheDocument();
+  });
+
+  it("should not subtract a long-term debt from the headline net worth", () => {
+    const portfolioDerived = portfolioCalculator.derive([CASH_POSITION]);
+    const mortgage: Debt = { id: "hipoteca", name: "Hipoteca", installment: 600, balance: 150000, note: "", deadline: farAwayDeadlineIsoDate() };
+
+    render(
+      <DashboardTab
+        portfolioDerived={portfolioDerived} debts={[mortgage]} baseBudget={null} months={[]}
+        goalsSettings={null} wealthTargets={null}
+      />,
+    );
+
+    expect(netWorthCardHeadline().textContent).toBe(currencyFormatter.euro(portfolioDerived.total));
+  });
+
+  it("should show the net worth including all debt as a small subtitle", () => {
+    const portfolioDerived = portfolioCalculator.derive([CASH_POSITION]);
+    const mortgage: Debt = { id: "hipoteca", name: "Hipoteca", installment: 600, balance: 150000, note: "", deadline: farAwayDeadlineIsoDate() };
+
+    render(
+      <DashboardTab
+        portfolioDerived={portfolioDerived} debts={[mortgage]} baseBudget={null} months={[]}
+        goalsSettings={null} wealthTargets={null}
+      />,
+    );
+
+    const expectedFullNetWorth = portfolioDerived.total - mortgage.balance;
+    expect(screen.getByText("Patrimonio neto con toda la deuda:")).toBeInTheDocument();
+    expect(getByExactText(currencyFormatter.euro(expectedFullNetWorth))).toBeInTheDocument();
+  });
+
+  it("should show a placeholder instead of the composition chart when the portfolio is empty", () => {
+    const portfolioDerived = portfolioCalculator.derive([]);
+
+    render(
+      <DashboardTab portfolioDerived={portfolioDerived} debts={[]} baseBudget={null} months={[]} goalsSettings={null} wealthTargets={null} />,
+    );
+
+    expect(screen.getByText("Sin posiciones todavía. La composición aparecerá aquí en cuanto añadas tu primera posición.")).toBeInTheDocument();
+  });
+
+  it("should show the wealth composition legend with each group's share once there are positions", () => {
+    const portfolioDerived = portfolioCalculator.derive([CASH_POSITION, FUND_POSITION]);
+
+    render(
+      <DashboardTab portfolioDerived={portfolioDerived} debts={[]} baseBudget={null} months={[]} goalsSettings={null} wealthTargets={null} />,
+    );
+
+    expect(screen.getByText("Liquidez")).toBeInTheDocument();
+    expect(screen.getByText("Renta variable")).toBeInTheDocument();
+    expect(screen.queryByText("Bitcoin")).not.toBeInTheDocument();
+  });
+
+  it("should prompt to configure the budget when there is no surplus history yet", () => {
+    const portfolioDerived = portfolioCalculator.derive([]);
+
+    render(
+      <DashboardTab portfolioDerived={portfolioDerived} debts={[]} baseBudget={null} months={[]} goalsSettings={null} wealthTargets={null} />,
+    );
+
+    expect(screen.getByText("Configura tu presupuesto para ver el superávit de los últimos meses.")).toBeInTheDocument();
+  });
+
+  it("should show the surplus history once a month has been registered", () => {
+    const portfolioDerived = portfolioCalculator.derive([]);
+    const month: Month = monthFactory.createCurrent();
+
+    render(
+      <DashboardTab
+        portfolioDerived={portfolioDerived} debts={[]} baseBudget={SAMPLE_BUDGET} months={[month]}
+        goalsSettings={null} wealthTargets={null}
+      />,
+    );
+
+    expect(screen.queryByText("Registra algún mes en Presupuesto para ver aquí su evolución.")).not.toBeInTheDocument();
   });
 });

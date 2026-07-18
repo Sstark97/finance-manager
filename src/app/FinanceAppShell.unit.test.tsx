@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from "react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { FinanceAppShell, type FinanceAppShellProps } from "@/app/FinanceAppShell";
 import { browserFileDownloader } from "@/shared/infrastructure/BrowserFileDownloader";
@@ -74,11 +74,32 @@ describe("FinanceAppShell", () => {
     expect(screen.getByRole("main")).toBeInTheDocument();
   });
 
+  it("should keep the settings menu closed until the Ajustes button is pressed", () => {
+    render(<FinanceAppShell {...BASE_PROPS} />);
+
+    expect(screen.getByRole("button", { name: "Ajustes" })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+
+  it("should open the settings menu with export and sign-out actions when Ajustes is pressed", async () => {
+    const user = userEvent.setup();
+    render(<FinanceAppShell {...BASE_PROPS} />);
+
+    await user.click(screen.getByRole("button", { name: "Ajustes" }));
+
+    expect(screen.getByRole("button", { name: "Ajustes" })).toHaveAttribute("aria-expanded", "true");
+    const menu = screen.getByRole("menu", { name: "Ajustes" });
+    expect(within(menu).getByRole("menuitem", { name: "Exportar JSON" })).toBeInTheDocument();
+    expect(within(menu).getByRole("menuitem", { name: "Exportar CSV" })).toBeInTheDocument();
+    expect(within(menu).getByRole("menuitem", { name: "Cerrar sesión" })).toBeInTheDocument();
+  });
+
   it("should download a JSON file with the current app state when Exportar JSON is pressed", async () => {
     const user = userEvent.setup();
     render(<FinanceAppShell {...BASE_PROPS} />);
 
-    await user.click(screen.getByRole("button", { name: "Exportar JSON" }));
+    await user.click(screen.getByRole("button", { name: "Ajustes" }));
+    await user.click(screen.getByRole("menuitem", { name: "Exportar JSON" }));
 
     expect(browserFileDownloader.download).toHaveBeenCalledWith("finanzas.json", expect.any(String), "application/json");
   });
@@ -87,8 +108,19 @@ describe("FinanceAppShell", () => {
     const user = userEvent.setup();
     render(<FinanceAppShell {...BASE_PROPS} />);
 
-    await user.click(screen.getByRole("button", { name: "Exportar CSV" }));
+    await user.click(screen.getByRole("button", { name: "Ajustes" }));
+    await user.click(screen.getByRole("menuitem", { name: "Exportar CSV" }));
 
     expect(browserFileDownloader.download).toHaveBeenCalledWith("finanzas.csv", expect.any(String), "text/csv");
+  });
+
+  it("should close the settings menu after selecting an export action", async () => {
+    const user = userEvent.setup();
+    render(<FinanceAppShell {...BASE_PROPS} />);
+
+    await user.click(screen.getByRole("button", { name: "Ajustes" }));
+    await user.click(screen.getByRole("menuitem", { name: "Exportar JSON" }));
+
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });
 });

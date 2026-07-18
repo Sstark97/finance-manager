@@ -10,6 +10,7 @@ import type { GoalsSettings } from "@/features/goals/application/GoalsSettings";
 import type { WealthTargets } from "@/features/wealth/domain/WealthTargets";
 import { AppStyles } from "@/app/AppStyles";
 import { MobileTabBar, DashboardIcon, WealthIcon, BudgetIcon, GoalsIcon, DebtsIcon } from "@/app/MobileTabBar";
+import { SettingsMenu } from "@/app/SettingsMenu";
 import { DashboardTab } from "@/features/dashboard/components/DashboardTab";
 import { WealthTab } from "@/features/wealth/components/WealthTab";
 import { BudgetTab } from "@/features/budget/components/BudgetTab";
@@ -149,6 +150,7 @@ export function FinanceAppShell({
     const content = financeDataExporter.toCsv({ portfolio, debts, baseBudget, fixedExpenseItems, months });
     browserFileDownloader.download("finanzas.csv", content, "text/csv");
   };
+  const signOut = (): void => { void signOutAction(); };
 
   const TABS: Array<{ id: TabId; label: string; icon: (color: string) => React.ReactNode }> = [
     { id: "dashboard",   label: "Resumen", icon: DashboardIcon },
@@ -185,14 +187,7 @@ export function FinanceAppShell({
               </button>
             ))}
           </nav>
-          <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
-            <button className="seg" onClick={exportAsJson} style={{ border:`1px solid ${palette.line}` }}>Exportar JSON</button>
-            <button className="seg" onClick={exportAsCsv} style={{ border:`1px solid ${palette.line}` }}>Exportar CSV</button>
-            <span style={{ fontSize:12.5, color:palette.sub }}>{currentUserEmail}</span>
-            <form action={signOutAction}>
-              <button type="submit" className="tabbtn" style={{ border:`1px solid ${palette.line}` }}>Cerrar sesión</button>
-            </form>
-          </div>
+          <SettingsMenu userEmail={currentUserEmail} onExportJson={exportAsJson} onExportCsv={exportAsCsv} onSignOut={signOut} />
         </div>
       </header>
 
