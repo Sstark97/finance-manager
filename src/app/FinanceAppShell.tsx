@@ -9,7 +9,8 @@ import type { Month, Budget, FixedExpenseItem } from "@/features/budget/domain/t
 import type { GoalsSettings } from "@/features/goals/application/GoalsSettings";
 import type { WealthTargets } from "@/features/wealth/domain/WealthTargets";
 import { AppStyles } from "@/app/AppStyles";
-import { MobileTabBar, WealthIcon, BudgetIcon, GoalsIcon, DebtsIcon } from "@/app/MobileTabBar";
+import { MobileTabBar, DashboardIcon, WealthIcon, BudgetIcon, GoalsIcon, DebtsIcon } from "@/app/MobileTabBar";
+import { DashboardTab } from "@/features/dashboard/components/DashboardTab";
 import { WealthTab } from "@/features/wealth/components/WealthTab";
 import { BudgetTab } from "@/features/budget/components/BudgetTab";
 import { GoalsTab } from "@/features/goals/components/GoalsTab";
@@ -25,9 +26,10 @@ import { signOutAction } from "@/app/actions/authSession";
 
 const PERSIST_DEBOUNCE_MS = 800;
 
-type TabId = "wealth" | "budget" | "debts" | "goals";
+type TabId = "dashboard" | "wealth" | "budget" | "debts" | "goals";
 
 const TAB_TITLE: Record<TabId, string> = {
+  dashboard: "Resumen financiero",
   wealth: "Patrimonio total",
   budget: "Presupuesto",
   debts: "Deudas",
@@ -49,7 +51,7 @@ export function FinanceAppShell({
   currentUserEmail, initialPortfolio, initialDebts, initialBaseBudget, initialFixedExpenseItems, initialMonths,
   initialGoalsSettings, initialWealthTargets,
 }: FinanceAppShellProps): React.JSX.Element {
-  const [tab, setTab] = useState<TabId>("wealth");
+  const [tab, setTab] = useState<TabId>("dashboard");
   const [portfolio, setPortfolio] = useState<Position[]>(initialPortfolio);
   const [debts, setDebts] = useState<Debt[]>(initialDebts);
   const [baseBudget, setBaseBudget] = useState<Budget | null>(initialBaseBudget);
@@ -149,6 +151,7 @@ export function FinanceAppShell({
   };
 
   const TABS: Array<{ id: TabId; label: string; icon: (color: string) => React.ReactNode }> = [
+    { id: "dashboard",   label: "Resumen", icon: DashboardIcon },
     { id: "wealth",  label: "Patrimonio", icon: WealthIcon },
     { id: "budget", label: "Presupuesto", icon: BudgetIcon },
     { id: "debts",       label: "Deudas", icon: DebtsIcon },
@@ -195,6 +198,12 @@ export function FinanceAppShell({
 
       <main aria-labelledby="finance-app-heading">
         <div role="tabpanel" id="finance-tabpanel" aria-labelledby={`tab-${tab}`} tabIndex={-1}>
+          {tab === "dashboard" && (
+            <DashboardTab
+              portfolioDerived={portfolioDerived} debts={debts} baseBudget={baseBudget} months={months}
+              goalsSettings={goalsSettings} wealthTargets={wealthTargets}
+            />
+          )}
           {tab === "wealth" && (
             <WealthTab
               portfolio={portfolio} setPortfolio={setPortfolio} portfolioDerived={portfolioDerived} debts={debts}

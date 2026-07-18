@@ -57,7 +57,7 @@ describe("SaveBudget", () => {
     const useCase = new SaveBudget(new StubBudgetTransactionRunner({ budgetRepository, monthRepository }));
     const baseBudget: Budget = { ingresoNeto: 1766, gastosFijos: 778.89, inversion: 293, fondoEmergencia: 325, ocio: 270, caprichos: 100 };
     const fixedExpenseItems: FixedExpenseItem[] = [{ id: "coche", name: "Coche", amount: 173.28 }];
-    const months: Month[] = [{ id: "month-1", date: new Date("2026-06-01"), label: "jun 26", overrides: {}, actual: {}, events: [], netIncomeOverride: null }];
+    const months: Month[] = [{ id: "month-1", date: new Date("2026-06-01"), label: "jun 26", overrides: {}, movements: [], events: [], netIncomeOverride: null }];
 
     await useCase.invoke("user-1", { baseBudget, fixedExpenseItems, months });
 

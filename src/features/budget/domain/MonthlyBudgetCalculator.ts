@@ -30,8 +30,9 @@ export class MonthlyBudgetCalculator {
     const actual = {} as Record<CategoryId, number | null>;
     const realized = {} as Record<CategoryId, number | null>;
     CATEGORIES.forEach(category => {
-      const manualActual = month.actual ? month.actual[category.id] : undefined;
-      actual[category.id] = manualActual != null ? manualActual : null;
+      const categoryMovements = (month.movements || []).filter(movement => movement.categoryId === category.id);
+      const movementsTotal = categoryMovements.reduce((sum, movement) => sum + movement.amount, 0);
+      actual[category.id] = categoryMovements.length > 0 ? movementsTotal : null;
       const categoryEvents = categoryEventsById[category.id];
       const isRegistered = actual[category.id] != null || categoryEvents > 0;
       realized[category.id] = isRegistered ? (actual[category.id] ?? values[category.id]) + categoryEvents : null;

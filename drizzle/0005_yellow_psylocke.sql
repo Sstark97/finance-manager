@@ -1,0 +1,1 @@
+ALTER TABLE `budget_month_categories` DROP COLUMN `actual_amount`;

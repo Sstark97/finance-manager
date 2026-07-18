@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { MonthlyBudgetCalculator } from "@/features/budget/domain/MonthlyBudgetCalculator";
-import type { Month, Budget } from "@/features/budget/domain/types";
+import type { CategoryId, Month, Budget } from "@/features/budget/domain/types";
+import type { BudgetMovement } from "@/features/budget/domain/BudgetMovement";
 
 describe("MonthlyBudgetCalculator", () => {
   const base: Budget = {
@@ -18,9 +19,13 @@ describe("MonthlyBudgetCalculator", () => {
     label: "ene 26",
     overrides: {},
     events: [],
-    actual: {},
+    movements: [],
     netIncomeOverride: null,
     ...overrides,
+  });
+
+  const buildMovement = (categoryId: CategoryId, amount: number, id = `mov-${categoryId}-${amount}`): BudgetMovement => ({
+    id, categoryId, amount, occurredAt: new Date(2026, 0, 15), note: "",
   });
 
   it("should use the month override for a category instead of the base value", () => {
@@ -45,7 +50,7 @@ describe("MonthlyBudgetCalculator", () => {
     expect(result.values.ocio).toBe(base.ocio);
   });
 
-  it("should add events on top of the plan into realized when there is no manual actual", () => {
+  it("should add events on top of the plan into realized when there are no movements", () => {
     const month = buildMonth({
       events: [
         { id: "e1", name: "Regalo", amount: 40, category: "ocio" },
@@ -58,7 +63,7 @@ describe("MonthlyBudgetCalculator", () => {
     expect(result.realized.ocio).toBe(base.ocio + 40 + 15);
   });
 
-  it("should leave realized as null for a category with no manual actual and no events", () => {
+  it("should leave realized as null for a category with no movements and no events", () => {
     const month = buildMonth();
 
     const result = new MonthlyBudgetCalculator().calculate(month, base);
@@ -66,9 +71,9 @@ describe("MonthlyBudgetCalculator", () => {
     expect(result.realized.ocio).toBeNull();
   });
 
-  it("should combine the manual actual with events into realized", () => {
+  it("should combine the sum of movements with events into realized", () => {
     const month = buildMonth({
-      actual: { ocio: 250 },
+      movements: [buildMovement("ocio", 250)],
       events: [{ id: "e1", name: "Cine", amount: 15, category: "ocio" }],
     });
 
@@ -77,12 +82,22 @@ describe("MonthlyBudgetCalculator", () => {
     expect(result.realized.ocio).toBe(250 + 15);
   });
 
-  it("should use the manual actual alone for realized when there are no events", () => {
-    const month = buildMonth({ actual: { ocio: 250 } });
+  it("should use the sum of movements alone for realized when there are no events", () => {
+    const month = buildMonth({ movements: [buildMovement("ocio", 250)] });
 
     const result = new MonthlyBudgetCalculator().calculate(month, base);
 
     expect(result.realized.ocio).toBe(250);
+  });
+
+  it("should sum every movement recorded for a category into its actual amount", () => {
+    const month = buildMonth({
+      movements: [buildMovement("ocio", 80, "mov-1"), buildMovement("ocio", 45, "mov-2")],
+    });
+
+    const result = new MonthlyBudgetCalculator().calculate(month, base);
+
+    expect(result.actual.ocio).toBe(125);
   });
 
   it("should add netIncomeOverride and ingreso events into the income for the month", () => {
@@ -119,7 +134,7 @@ describe("MonthlyBudgetCalculator", () => {
   });
 
   it("should use the realized value for totalActual when a category has been registered", () => {
-    const month = buildMonth({ actual: { ocio: 250 } });
+    const month = buildMonth({ movements: [buildMovement("ocio", 250)] });
 
     const result = new MonthlyBudgetCalculator().calculate(month, base);
     const totalWithoutOcio = base.gastosFijos + base.inversion + base.fondoEmergencia + base.caprichos;
@@ -127,8 +142,8 @@ describe("MonthlyBudgetCalculator", () => {
     expect(result.totalActual).toBe(totalWithoutOcio + 250);
   });
 
-  it("should fall back to the budgeted value for totalActual when realized is null", () => {
-    const month = buildMonth({ actual: { ocio: null } });
+  it("should fall back to the budgeted value for totalActual when a category has no movements", () => {
+    const month = buildMonth();
 
     const result = new MonthlyBudgetCalculator().calculate(month, base);
     const expectedTotalBudgeted = base.gastosFijos + base.inversion + base.fondoEmergencia + base.ocio + base.caprichos;

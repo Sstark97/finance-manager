@@ -20,14 +20,30 @@ function ocioCategoryRow(): HTMLElement {
   return ocioLabel.parentElement!.parentElement as HTMLElement;
 }
 
-async function openBreakdownAndAddOcioEvent(amount: number): Promise<void> {
+async function openBreakdown(): Promise<ReturnType<typeof userEvent.setup>> {
   const user = userEvent.setup();
   await user.click(screen.getByRole("button", { name: /desglose/ }));
-  await user.type(screen.getByPlaceholderText("Nombre (ej. deuda puntual)"), "Cine");
-  await user.type(screen.getByPlaceholderText("Importe"), String(amount));
-  const comboBoxes = screen.getAllByRole("combobox");
-  await user.selectOptions(comboBoxes[comboBoxes.length - 1], "Ocio");
-  await user.click(screen.getByRole("button", { name: "+ Añadir" }));
+  return user;
+}
+
+function getByExactText(scope: ReturnType<typeof within>, expectedText: string): HTMLElement {
+  return scope.getByText((_text: string, element: Element | null) => element?.textContent === expectedText);
+}
+
+async function addOcioEvent(user: ReturnType<typeof userEvent.setup>, amount: number): Promise<void> {
+  const nameInput = screen.getByPlaceholderText("Nombre (ej. deuda puntual)");
+  const eventRow = within(nameInput.closest(".evt-row") as HTMLElement);
+  await user.type(nameInput, "Cine");
+  await user.type(eventRow.getByPlaceholderText("Importe"), String(amount));
+  await user.selectOptions(eventRow.getByRole("combobox"), "Ocio");
+  await user.click(eventRow.getByRole("button", { name: "+ Añadir" }));
+}
+
+async function addOcioMovement(user: ReturnType<typeof userEvent.setup>, amount: number, note = "Cine"): Promise<void> {
+  const ocioRow = within(ocioCategoryRow());
+  await user.type(ocioRow.getByLabelText("Importe del nuevo movimiento de Ocio"), String(amount));
+  await user.type(ocioRow.getByLabelText("Nota del nuevo movimiento de Ocio"), note);
+  await user.click(ocioRow.getByRole("button", { name: "+ Movimiento" }));
 }
 
 describe("BudgetMonthlyBreakdown", () => {
@@ -35,20 +51,57 @@ describe("BudgetMonthlyBreakdown", () => {
     const month = monthFactory.create(2026, 6);
     render(<StatefulBudgetMonthlyBreakdown initialMonths={[month]} />);
 
-    await openBreakdownAndAddOcioEvent(40);
+    const user = await openBreakdown();
+    await addOcioEvent(user, 40);
 
     const ocioRow = within(ocioCategoryRow());
     expect(ocioRow.getByText((_text, element) => element?.textContent === `Total presupuestado: ${currencyFormatter.euroWithCents(SAMPLE_BUDGET.ocio)}`)).toBeInTheDocument();
     expect(ocioRow.getByText((_text, element) => element?.textContent === `+${currencyFormatter.euroWithCents(40)} vs plan`)).toBeInTheDocument();
   });
 
-  it("should leave the manual Real input empty after an event is added with no manual actual registered", async () => {
+  it("should show the registered total as unregistered when a category has no movements yet", async () => {
     const month = monthFactory.create(2026, 6);
     render(<StatefulBudgetMonthlyBreakdown initialMonths={[month]} />);
 
-    await openBreakdownAndAddOcioEvent(40);
+    await openBreakdown();
 
     const ocioRow = within(ocioCategoryRow());
-    expect(ocioRow.getByPlaceholderText("sin registrar")).toHaveValue(null);
+    expect(ocioRow.getByText("sin registrar")).toBeInTheDocument();
+  });
+
+  it("should list a newly added movement and reflect its amount as the registered total", async () => {
+    const month = monthFactory.create(2026, 6);
+    render(<StatefulBudgetMonthlyBreakdown initialMonths={[month]} />);
+
+    const user = await openBreakdown();
+    await addOcioMovement(user, 42.5);
+
+    const ocioRow = within(ocioCategoryRow());
+    expect(getByExactText(ocioRow, currencyFormatter.euroWithCents(42.5))).toBeInTheDocument();
+    expect(ocioRow.getByDisplayValue("Cine")).toBeInTheDocument();
+  });
+
+  it("should sum every movement recorded for the same category into its registered total", async () => {
+    const month = monthFactory.create(2026, 6);
+    render(<StatefulBudgetMonthlyBreakdown initialMonths={[month]} />);
+
+    const user = await openBreakdown();
+    await addOcioMovement(user, 30, "Cine");
+    await addOcioMovement(user, 20, "Palomitas");
+
+    const ocioRow = within(ocioCategoryRow());
+    expect(getByExactText(ocioRow, currencyFormatter.euroWithCents(50))).toBeInTheDocument();
+  });
+
+  it("should remove a movement and fall back to unregistered when it was the only one", async () => {
+    const month = monthFactory.create(2026, 6);
+    render(<StatefulBudgetMonthlyBreakdown initialMonths={[month]} />);
+
+    const user = await openBreakdown();
+    await addOcioMovement(user, 42.5);
+    const ocioRow = within(ocioCategoryRow());
+    await user.click(ocioRow.getByRole("button", { name: /Eliminar movimiento de Ocio/ }));
+
+    expect(ocioRow.getByText("sin registrar")).toBeInTheDocument();
   });
 });

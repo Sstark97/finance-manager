@@ -44,6 +44,17 @@ function iconStrokeProps(color: string): React.SVGProps<SVGSVGElement> {
   return { width: 22, height: 22, viewBox: "0 0 24 24", fill: "none", stroke: color, strokeWidth: 1.8, strokeLinecap: "round", strokeLinejoin: "round" };
 }
 
+export function DashboardIcon(color: string): React.ReactNode {
+  return (
+    <svg {...iconStrokeProps(color)}>
+      <rect x="3" y="3" width="8" height="8" rx="1.5" />
+      <rect x="13" y="3" width="8" height="5" rx="1.5" />
+      <rect x="13" y="10" width="8" height="11" rx="1.5" />
+      <rect x="3" y="13" width="8" height="8" rx="1.5" />
+    </svg>
+  );
+}
+
 export function WealthIcon(color: string): React.ReactNode {
   return (
     <svg {...iconStrokeProps(color)}>

@@ -1,3 +1,5 @@
+import type { BudgetMovement } from "@/features/budget/domain/BudgetMovement";
+
 export type CategoryId = "gastosFijos" | "inversion" | "fondoEmergencia" | "ocio" | "caprichos";
 export type CategoryType = "gasto" | "ahorro";
 
@@ -28,7 +30,7 @@ export interface Month {
   label: string;
   overrides: Partial<Record<CategoryId, number>>;
   events: BudgetEvent[];
-  actual: Partial<Record<CategoryId, number | null>>;
+  movements: BudgetMovement[];
   netIncomeOverride: number | null;
 }
 

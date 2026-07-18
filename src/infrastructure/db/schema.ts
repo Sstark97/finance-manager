@@ -122,7 +122,6 @@ export const budgetMonthCategories = sqliteTable("budget_month_categories", {
   monthId: text("month_id").notNull().references(() => budgetMonths.id),
   categoryId: text("category_id").notNull(),
   overrideAmount: real("override_amount"),
-  actualAmount: real("actual_amount"),
 }, (table) => [
   primaryKey({ columns: [table.monthId, table.categoryId] }),
 ]);
@@ -134,6 +133,19 @@ export const budgetEvents = sqliteTable("budget_events", {
   amount: real("amount").notNull(),
   category: text("category").notNull(),
 });
+
+export const budgetMovements = sqliteTable(
+  "budget_movements",
+  {
+    id: text("id").primaryKey(),
+    monthId: text("month_id").notNull().references(() => budgetMonths.id),
+    categoryId: text("category_id").notNull(),
+    occurredAt: integer("occurred_at").notNull(),
+    amount: real("amount").notNull(),
+    note: text("note").notNull(),
+  },
+  (table) => [index("budget_movements_month_id_idx").on(table.monthId)],
+);
 
 export const goalsSettings = sqliteTable("goals_settings", {
   userId: text("user_id")

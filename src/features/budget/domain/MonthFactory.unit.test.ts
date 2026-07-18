@@ -11,12 +11,12 @@ describe("MonthFactory", () => {
       expect(month.label).toBe(new Date(2026, 6, 1).toLocaleDateString("es-ES", { month: "short", year: "2-digit" }).replace(".", ""));
     });
 
-    it("should default overrides, events, actual and netIncomeOverride to empty state", () => {
+    it("should default overrides, events, movements and netIncomeOverride to empty state", () => {
       const month = monthFactory.create(2026, 6);
 
       expect(month.overrides).toEqual({});
       expect(month.events).toEqual([]);
-      expect(month.actual).toEqual({});
+      expect(month.movements).toEqual([]);
       expect(month.netIncomeOverride).toBeNull();
     });
 

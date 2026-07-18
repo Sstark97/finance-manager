@@ -31,10 +31,18 @@ beforeEach(() => {
 });
 
 describe("FinanceAppShell", () => {
-  it("should offer a dedicated Deudas tab alongside Patrimonio, Presupuesto and Metas", () => {
+  it("should offer a dedicated Deudas tab alongside Resumen, Patrimonio, Presupuesto and Metas", () => {
     render(<FinanceAppShell {...BASE_PROPS} />);
 
     expect(screen.getByRole("tab", { name: "Deudas" })).toBeInTheDocument();
+  });
+
+  it("should open on the Resumen tab showing the net worth dashboard by default", () => {
+    render(<FinanceAppShell {...BASE_PROPS} />);
+
+    expect(screen.getByRole("tab", { name: "Resumen" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("heading", { name: "Resumen financiero" })).toBeInTheDocument();
+    expect(screen.getByText("Patrimonio neto")).toBeInTheDocument();
   });
 
   it("should render the debts section and update the heading once the Deudas tab is selected", async () => {
@@ -52,12 +60,12 @@ describe("FinanceAppShell", () => {
     const user = userEvent.setup();
     render(<FinanceAppShell {...BASE_PROPS} />);
 
-    expect(screen.getByRole("tab", { name: "Patrimonio" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "Resumen" })).toHaveAttribute("aria-selected", "true");
 
     await user.click(screen.getByRole("tab", { name: "Presupuesto" }));
 
     expect(screen.getByRole("tab", { name: "Presupuesto" })).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByRole("tab", { name: "Patrimonio" })).toHaveAttribute("aria-selected", "false");
+    expect(screen.getByRole("tab", { name: "Resumen" })).toHaveAttribute("aria-selected", "false");
   });
 
   it("should expose the tab content inside a single main landmark", () => {

@@ -14,7 +14,7 @@ export class MonthFactory {
       id: this.idGenerator.generate(),
       date: new Date(year, monthIndex, 1),
       label: new Date(year, monthIndex, 1).toLocaleDateString("es-ES", { month: "short", year: "2-digit" }).replace(".", ""),
-      overrides, events, actual: {}, netIncomeOverride: null,
+      overrides, events, movements: [], netIncomeOverride: null,
     };
   }
 

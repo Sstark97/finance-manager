@@ -23,7 +23,28 @@ export interface BudgetMonthlyBreakdownProps {
 interface BreakdownDraft {
   netIncomeOverride: number | null;
   overrides: Partial<Record<CategoryId, number>>;
-  actual: Partial<Record<CategoryId, number | null>>;
+}
+
+interface NewMovementDraft {
+  date: string;
+  amount: string;
+  note: string;
+}
+
+function todayIsoDate(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function toIsoDate(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+function emptyMovementDraft(): NewMovementDraft {
+  return { date: todayIsoDate(), amount: "", note: "" };
+}
+
+function buildEmptyMovementDrafts(): Record<CategoryId, NewMovementDraft> {
+  return Object.fromEntries(CATEGORIES.map(category => [category.id, emptyMovementDraft()])) as Record<CategoryId, NewMovementDraft>;
 }
 
 export function BudgetMonthlyBreakdown({ baseBudget, months, setMonths }: BudgetMonthlyBreakdownProps): React.JSX.Element {
@@ -34,6 +55,7 @@ export function BudgetMonthlyBreakdown({ baseBudget, months, setMonths }: Budget
   const [newEvent, setNewEvent] = useState<{ name: string; amount: string; category: EventCategory }>({ name:"", amount:"", category:"gastosFijos" });
   const [breakdownOpen, setBreakdownOpen] = useState<boolean>(false);
   const [saved, setSaved] = useState<boolean>(false);
+  const [newMovementDrafts, setNewMovementDrafts] = useState<Record<CategoryId, NewMovementDraft>>(buildEmptyMovementDrafts);
 
   // Si el mes seleccionado deja de estar disponible (no debería, pero por seguridad), se deriva
   // directamente el último disponible en el propio render, sin useEffect.
@@ -44,34 +66,31 @@ export function BudgetMonthlyBreakdown({ baseBudget, months, setMonths }: Budget
   const result = monthlyBudgetCalculator.calculate(month, baseBudget);
 
   // --------- Borrador editable del desglose: no toca "months" hasta pulsar Guardar ---------
-  const [draft, setDraft] = useState<BreakdownDraft>({ netIncomeOverride: month.netIncomeOverride, overrides: month.overrides, actual: month.actual });
+  const [draft, setDraft] = useState<BreakdownDraft>({ netIncomeOverride: month.netIncomeOverride, overrides: month.overrides });
   const [syncedMonthId, setSyncedMonthId] = useState<string>(month.id);
   if (month.id !== syncedMonthId) {
     setSyncedMonthId(month.id);
-    setDraft({ netIncomeOverride: month.netIncomeOverride, overrides: month.overrides, actual: month.actual });
+    setDraft({ netIncomeOverride: month.netIncomeOverride, overrides: month.overrides });
     setSaved(false);
   }
 
-  const draftResult = monthlyBudgetCalculator.calculate({ ...month, netIncomeOverride: draft.netIncomeOverride, overrides: draft.overrides, actual: draft.actual }, baseBudget);
+  const draftResult = monthlyBudgetCalculator.calculate({ ...month, netIncomeOverride: draft.netIncomeOverride, overrides: draft.overrides }, baseBudget);
 
-  const hasUnsavedChanges = JSON.stringify(draft) !== JSON.stringify({ netIncomeOverride: month.netIncomeOverride, overrides: month.overrides, actual: month.actual });
+  const hasUnsavedChanges = JSON.stringify(draft) !== JSON.stringify({ netIncomeOverride: month.netIncomeOverride, overrides: month.overrides });
 
   const editDraftOverride = (categoryId: CategoryId, value: string): void => setDraft(draft => ({
     ...draft, overrides: { ...draft.overrides, [categoryId]: value === "" ? undefined : (parseFloat(value) || 0) }
-  }));
-  const editDraftActual = (categoryId: CategoryId, value: string): void => setDraft(draft => ({
-    ...draft, actual: { ...draft.actual, [categoryId]: value === "" ? null : (parseFloat(value) || 0) }
   }));
   const editDraftIncomeOverride = (value: string): void => setDraft(draft => ({
     ...draft, netIncomeOverride: value === "" ? null : (parseFloat(value) || 0)
   }));
 
   const saveBreakdown = (): void => {
-    setMonths(monthList => monthList.map(item => item.id !== month.id ? item : { ...item, netIncomeOverride: draft.netIncomeOverride, overrides: draft.overrides, actual: draft.actual }));
+    setMonths(monthList => monthList.map(item => item.id !== month.id ? item : { ...item, netIncomeOverride: draft.netIncomeOverride, overrides: draft.overrides }));
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
-  const discardChanges = (): void => setDraft({ netIncomeOverride: month.netIncomeOverride, overrides: month.overrides, actual: month.actual });
+  const discardChanges = (): void => setDraft({ netIncomeOverride: month.netIncomeOverride, overrides: month.overrides });
 
   const addEvent = (): void => {
     if (!newEvent.name || !newEvent.amount) return;
@@ -82,6 +101,37 @@ export function BudgetMonthlyBreakdown({ baseBudget, months, setMonths }: Budget
   };
   const removeEvent = (eventId: string): void => setMonths(monthList => monthList.map(item => item.id !== month.id ? item : {
     ...item, events: item.events.filter(event => event.id !== eventId)
+  }));
+
+  const editNewMovementDraft = (categoryId: CategoryId, field: keyof NewMovementDraft, value: string): void =>
+    setNewMovementDrafts(previous => ({ ...previous, [categoryId]: { ...previous[categoryId], [field]: value } }));
+
+  const addMovement = (categoryId: CategoryId): void => {
+    const movementDraft = newMovementDrafts[categoryId];
+    if (!movementDraft.amount) return;
+    setMonths(monthList => monthList.map(item => item.id !== month.id ? item : {
+      ...item,
+      movements: [...item.movements, {
+        id: idGenerator.generate(), categoryId,
+        amount: parseFloat(movementDraft.amount) || 0,
+        occurredAt: new Date(movementDraft.date || todayIsoDate()),
+        note: movementDraft.note,
+      }],
+    }));
+    setNewMovementDrafts(previous => ({ ...previous, [categoryId]: emptyMovementDraft() }));
+  };
+  const updateMovement = (movementId: string, field: "occurredAt" | "amount" | "note", value: string): void =>
+    setMonths(monthList => monthList.map(item => item.id !== month.id ? item : {
+      ...item,
+      movements: item.movements.map(movement => movement.id !== movementId ? movement : {
+        ...movement,
+        ...(field === "amount" ? { amount: parseFloat(value) || 0 }
+          : field === "occurredAt" ? { occurredAt: new Date(value || todayIsoDate()) }
+          : { note: value }),
+      }),
+    }));
+  const removeMovement = (movementId: string): void => setMonths(monthList => monthList.map(item => item.id !== month.id ? item : {
+    ...item, movements: item.movements.filter(movement => movement.id !== movementId)
   }));
 
   const monthChartData = CATEGORIES.map(category => ({
@@ -140,11 +190,13 @@ export function BudgetMonthlyBreakdown({ baseBudget, months, setMonths }: Budget
         {CATEGORIES.map(category => {
           const categoryBase = baseBudget[category.id];
           const budgeted = draftResult.values[category.id];
-          const manualActualValue = draftResult.actual[category.id];
+          const registeredTotal = draftResult.actual[category.id];
           const realizedValue = draftResult.realized[category.id];
           const isRegistered = realizedValue != null;
           const delta = isRegistered ? realizedValue - budgeted : 0;
           const isOnTrack = category.type === "ahorro" ? delta >= 0 : delta <= 0;
+          const categoryMovements = month.movements.filter(movement => movement.categoryId === category.id);
+          const movementDraft = newMovementDrafts[category.id];
           return (
             <div key={category.id} style={{ marginBottom:16, paddingBottom:14, borderBottom:`1px solid ${palette.line}` }}>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:6, flexWrap:"wrap", gap:6 }}>
@@ -156,14 +208,34 @@ export function BudgetMonthlyBreakdown({ baseBudget, months, setMonths }: Budget
                   <div style={{ fontSize:10.5, color:palette.faint, marginBottom:2 }}>Presupuestado (override mes)</div>
                   <input className="inp" type="number" step="any" placeholder={String(categoryBase)} value={draft.overrides?.[category.id] ?? ""} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>editDraftOverride(category.id,event.target.value)} />
                 </label>
-                <label>
-                  <div style={{ fontSize:10.5, color:palette.faint, marginBottom:2 }}>Real</div>
-                  <input className="inp" type="number" step="any" placeholder="sin registrar" value={manualActualValue ?? ""} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>editDraftActual(category.id,event.target.value)} />
-                </label>
+                <div>
+                  <div style={{ fontSize:10.5, color:palette.faint, marginBottom:2 }}>Real (suma de movimientos)</div>
+                  <div className="num" style={{ padding:"8px 0", fontSize:14, fontWeight:600, color:palette.ink }}>
+                    {registeredTotal != null ? currencyFormatter.euroWithCents(registeredTotal) : "sin registrar"}
+                  </div>
+                </div>
               </div>
-              <div style={{ display:"flex", justifyContent:"space-between", marginTop:6, fontSize:11.5 }} className="num">
+              <div style={{ display:"flex", justifyContent:"space-between", marginTop:6, marginBottom:10, fontSize:11.5 }} className="num">
                 <span style={{ color:palette.sub }}>Total presupuestado: {currencyFormatter.euroWithCents(budgeted)}</span>
                 {isRegistered && <span style={{ color: isOnTrack ? palette.acc : palette.bad }}>{delta>=0?"+":""}{currencyFormatter.euroWithCents(delta)} vs plan</span>}
+              </div>
+
+              {categoryMovements.length === 0 && (
+                <div style={{ fontSize:11.5, color:palette.faint, marginBottom:8 }}>Sin movimientos registrados en {category.name.toLowerCase()}.</div>
+              )}
+              {categoryMovements.map(movement => (
+                <div key={movement.id} className="mov-row" style={{ marginBottom:6 }}>
+                  <input className="inp" type="date" value={toIsoDate(movement.occurredAt)} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>updateMovement(movement.id,"occurredAt",event.target.value)} aria-label={`Fecha del movimiento de ${category.name}`} />
+                  <input className="inp" type="number" step="any" value={movement.amount} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>updateMovement(movement.id,"amount",event.target.value)} aria-label={`Importe del movimiento de ${category.name}`} />
+                  <input className="inp" placeholder="Nota" value={movement.note} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>updateMovement(movement.id,"note",event.target.value)} style={{fontFamily:"'DM Sans',sans-serif"}} aria-label={`Nota del movimiento de ${category.name}`} />
+                  <button className="seg" onClick={()=>removeMovement(movement.id)} aria-label={`Eliminar movimiento de ${category.name} por ${currencyFormatter.euro(movement.amount)}`} style={{ color:palette.bad }}>✕</button>
+                </div>
+              ))}
+              <div className="mov-row">
+                <input className="inp" type="date" value={movementDraft.date} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>editNewMovementDraft(category.id,"date",event.target.value)} aria-label={`Fecha del nuevo movimiento de ${category.name}`} />
+                <input className="inp" type="number" step="any" placeholder="Importe" value={movementDraft.amount} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>editNewMovementDraft(category.id,"amount",event.target.value)} aria-label={`Importe del nuevo movimiento de ${category.name}`} />
+                <input className="inp" placeholder="Nota (opcional)" value={movementDraft.note} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>editNewMovementDraft(category.id,"note",event.target.value)} style={{fontFamily:"'DM Sans',sans-serif"}} aria-label={`Nota del nuevo movimiento de ${category.name}`} />
+                <button className="seg on" onClick={()=>addMovement(category.id)}>+ Movimiento</button>
               </div>
             </div>
           );

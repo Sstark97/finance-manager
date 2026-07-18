@@ -29,6 +29,20 @@
       "when": 1784369925677,
       "tag": "0003_even_butterfly",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1784395536434,
+      "tag": "0004_opposite_darkhawk",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1784397002857,
+      "tag": "0005_yellow_psylocke",
+      "breakpoints": true
     }
   ]
 }

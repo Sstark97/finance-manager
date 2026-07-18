@@ -54,7 +54,9 @@ describe("FinanceDataExporter", () => {
     it("should include one row per category for each registered month", () => {
       const month: Month = {
         id: "2026-07", date: new Date("2026-07-01"), label: "Julio 2026",
-        overrides: {}, events: [], actual: { ocio: 120 }, netIncomeOverride: null,
+        overrides: {}, events: [],
+        movements: [{ id: "movement-1", categoryId: "ocio", occurredAt: new Date("2026-07-10"), amount: 120, note: "" }],
+        netIncomeOverride: null,
       };
       const state: FinanceExportState = {
         ...emptyState,

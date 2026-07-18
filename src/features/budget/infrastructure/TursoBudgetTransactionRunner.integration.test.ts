@@ -13,7 +13,7 @@ describe("TursoBudgetTransactionRunner", () => {
 
   const initialBudget: Budget = { ingresoNeto: 1766, gastosFijos: 778.89, inversion: 293, fondoEmergencia: 325, ocio: 270, caprichos: 100 };
   const initialItems: FixedExpenseItem[] = [{ id: "coche", name: "Coche", amount: 173.28 }];
-  const initialMonths: Month[] = [{ id: "month-1", date: new Date("2026-06-01"), label: "jun 26", overrides: {}, actual: {}, events: [], netIncomeOverride: null }];
+  const initialMonths: Month[] = [{ id: "month-1", date: new Date("2026-06-01"), label: "jun 26", overrides: {}, movements: [], events: [], netIncomeOverride: null }];
 
   beforeEach(async () => {
     testDatabase = await new TestDatabaseFactory().create();

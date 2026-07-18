@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { MonthlyRecapCalculator } from "@/features/budget/domain/MonthlyRecapCalculator";
-import type { Month, Budget } from "@/features/budget/domain/types";
+import type { CategoryId, Month, Budget } from "@/features/budget/domain/types";
+import type { BudgetMovement } from "@/features/budget/domain/BudgetMovement";
 
 const base: Budget = {
   ingresoNeto: 1800,
@@ -17,16 +18,20 @@ const buildMonth = (overrides: Partial<Month> = {}): Month => ({
   label: "ene 26",
   overrides: {},
   events: [],
-  actual: {},
+  movements: [],
   netIncomeOverride: null,
   ...overrides,
+});
+
+const buildMovement = (categoryId: CategoryId, amount: number): BudgetMovement => ({
+  id: `mov-${categoryId}`, categoryId, amount, occurredAt: new Date(2026, 0, 15), note: "",
 });
 
 const calculator = new MonthlyRecapCalculator();
 
 describe("MonthlyRecapCalculator", () => {
   it("should flag a gasto category as overspent when its realized amount exceeds the plan", () => {
-    const month = buildMonth({ id: "julio", actual: { ocio: 450 } });
+    const month = buildMonth({ id: "julio", movements: [buildMovement("ocio", 450)] });
 
     const recap = calculator.calculate(month, [month], base);
 
@@ -36,7 +41,7 @@ describe("MonthlyRecapCalculator", () => {
   });
 
   it("should flag an ahorro category as overspent when its realized amount falls short of the plan", () => {
-    const month = buildMonth({ id: "julio", actual: { inversion: 100 } });
+    const month = buildMonth({ id: "julio", movements: [buildMovement("inversion", 100)] });
 
     const recap = calculator.calculate(month, [month], base);
 
@@ -54,7 +59,7 @@ describe("MonthlyRecapCalculator", () => {
   });
 
   it("should not flag a category that stays within its plan", () => {
-    const month = buildMonth({ id: "julio", actual: { ocio: 200 } });
+    const month = buildMonth({ id: "julio", movements: [buildMovement("ocio", 200)] });
 
     const recap = calculator.calculate(month, [month], base);
 
@@ -72,8 +77,8 @@ describe("MonthlyRecapCalculator", () => {
   });
 
   it("should compare against the chronologically previous month regardless of array order", () => {
-    const january = buildMonth({ id: "enero", date: new Date(2026, 0, 1), actual: { ocio: 200 } });
-    const february = buildMonth({ id: "febrero", date: new Date(2026, 1, 1), actual: { ocio: 250 } });
+    const january = buildMonth({ id: "enero", date: new Date(2026, 0, 1), movements: [buildMovement("ocio", 200)] });
+    const february = buildMonth({ id: "febrero", date: new Date(2026, 1, 1), movements: [buildMovement("ocio", 250)] });
 
     const recap = calculator.calculate(february, [february, january], base);
 
@@ -82,7 +87,7 @@ describe("MonthlyRecapCalculator", () => {
 
   it("should compute the surplus, income and total actual deltas against the previous month", () => {
     const january = buildMonth({ id: "enero", date: new Date(2026, 0, 1), netIncomeOverride: 1800 });
-    const february = buildMonth({ id: "febrero", date: new Date(2026, 1, 1), netIncomeOverride: 2000, actual: { ocio: 400 } });
+    const february = buildMonth({ id: "febrero", date: new Date(2026, 1, 1), netIncomeOverride: 2000, movements: [buildMovement("ocio", 400)] });
 
     const recap = calculator.calculate(february, [january, february], base);
 

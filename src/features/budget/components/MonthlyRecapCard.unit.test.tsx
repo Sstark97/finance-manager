@@ -21,7 +21,7 @@ const buildMonth = (overrides: Partial<Month> = {}): Month => ({
   label: "Enero 2026",
   overrides: {},
   events: [],
-  actual: {},
+  movements: [],
   netIncomeOverride: null,
   ...overrides,
 });
@@ -37,7 +37,7 @@ describe("MonthlyRecapCard", () => {
   });
 
   it("should list a category that has been overspent this month", () => {
-    const month = buildMonth({ actual: { ocio: 450 } });
+    const month = buildMonth({ movements: [{ id: "movement-1", categoryId: "ocio", occurredAt: new Date(2026, 0, 15), amount: 450, note: "" }] });
 
     render(<MonthlyRecapCard month={month} months={[month]} baseBudget={baseBudget} />);
 
