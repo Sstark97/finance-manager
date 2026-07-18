@@ -16,6 +16,7 @@ import type { HistoryRange } from "@/features/wealth/domain/HistoryRange";
 import type { PositionPricingResult } from "@/features/wealth/application/RefreshPositionPrices";
 import type { PortfolioHistoryResult } from "@/features/wealth/application/ComputePortfolioHistory";
 import type { Debt } from "@/shared/domain/types";
+import { DebtLedger } from "@/shared/domain/DebtLedger";
 import { Metric } from "@/shared/ui/Metric";
 import { WealthTargetsOnboarding } from "@/features/wealth/components/WealthTargetsOnboarding";
 
@@ -65,7 +66,7 @@ export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts, we
   const change = total - firstHistoryTotal;
   const changePercent = firstInvestedTotal ? (change / firstInvestedTotal) * 100 : 0;
 
-  const totalDebt = debts.reduce((sum,debt)=>sum+(debt.balance||0),0);
+  const totalDebt = new DebtLedger(debts).totalActiveBalance();
   const netWorth = total - totalDebt;
 
   const alerts: Alert[] = wealthTargets == null ? [] : ((targets: WealthTargets): Alert[] => {

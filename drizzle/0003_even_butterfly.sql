@@ -1,0 +1,1 @@
+ALTER TABLE `debts` ADD `settled_at` text;

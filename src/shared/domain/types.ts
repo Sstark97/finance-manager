@@ -5,4 +5,5 @@ export interface Debt {
   balance: number;
   note: string;
   deadline?: string;
+  settledAt?: string;
 }

@@ -5,6 +5,7 @@ import { palette } from "@/lib/theme";
 import { currencyFormatter } from "@/lib/CurrencyFormatter";
 import { idGenerator } from "@/lib/IdGenerator";
 import type { Debt } from "@/shared/domain/types";
+import { DebtLedger } from "@/shared/domain/DebtLedger";
 import { Metric } from "@/shared/ui/Metric";
 
 export interface DebtsSectionProps {
@@ -15,12 +16,22 @@ export interface DebtsSectionProps {
 
 const SAVED_MESSAGE_DURATION_MS = 2000;
 
+function todayIsoDate(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function formatSettlementDate(isoDate: string): string {
+  return new Date(isoDate).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" });
+}
+
 export function DebtsSection({ debts, setDebts, portfolioTotal }: DebtsSectionProps): React.JSX.Element {
   const [sectionOpen, setSectionOpen] = useState<boolean>(false);
   const [editing, setEditing] = useState<boolean>(false);
   const [draftDebts, setDraftDebts] = useState<Debt[]>(debts);
   const [syncedDebtsSnapshot, setSyncedDebtsSnapshot] = useState<string>(JSON.stringify(debts));
   const [saved, setSaved] = useState<boolean>(false);
+  const [historyOpen, setHistoryOpen] = useState<boolean>(false);
+  const [pendingDeletionId, setPendingDeletionId] = useState<string | null>(null);
 
   const debtsSnapshot = JSON.stringify(debts);
   if (!editing && debtsSnapshot !== syncedDebtsSnapshot) {
@@ -30,9 +41,15 @@ export function DebtsSection({ debts, setDebts, portfolioTotal }: DebtsSectionPr
 
   const hasUnsavedChanges = JSON.stringify(draftDebts) !== debtsSnapshot;
 
-  const totalDebt = debts.reduce((sum, debt) => sum + debt.balance, 0);
+  const ledger = new DebtLedger(debts);
+  const draftLedger = new DebtLedger(draftDebts);
+  const activeDebts = editing ? draftLedger.active() : ledger.active();
+  const settledDebts = editing ? draftLedger.settled() : ledger.settled();
+  const totalSettledBalance = editing ? draftLedger.totalSettledBalance() : ledger.totalSettledBalance();
+
+  const totalDebt = ledger.totalActiveBalance();
   const netWorth = portfolioTotal - totalDebt;
-  const draftTotalDebt = draftDebts.reduce((sum, debt) => sum + debt.balance, 0);
+  const draftTotalDebt = draftLedger.totalActiveBalance();
   const draftNetWorth = portfolioTotal - draftTotalDebt;
   const displayedTotalDebt = editing ? draftTotalDebt : totalDebt;
   const displayedNetWorth = editing ? draftNetWorth : netWorth;
@@ -46,22 +63,44 @@ export function DebtsSection({ debts, setDebts, portfolioTotal }: DebtsSectionPr
   const editDebtBalance = (id: string, value: string): void =>
     setDraftDebts(list => list.map(debt => (debt.id === id ? { ...debt, balance: parseFloat(value) || 0 } : debt)));
   const settleDebt = (id: string): void =>
-    setDraftDebts(list => list.map(debt => (debt.id === id ? { ...debt, balance: 0 } : debt)));
-  const removeDebt = (id: string): void =>
-    setDraftDebts(list => list.filter(debt => debt.id !== id));
+    setDraftDebts(list => new DebtLedger(list).settle(id, todayIsoDate()).all());
   const addDebt = (): void =>
     setDraftDebts(list => [...list, { id: idGenerator.generate(), name: "Nueva deuda", installment: 0, balance: 0, note: "" }]);
 
+  const requestDebtDeletion = (id: string): void => setPendingDeletionId(id);
+  const cancelDebtDeletion = (): void => setPendingDeletionId(null);
+  const confirmDebtDeletion = (id: string): void => {
+    setDraftDebts(list => new DebtLedger(list).discard(id).all());
+    setPendingDeletionId(null);
+  };
+
+  const toggleEditing = (): void => {
+    setEditing(previous => !previous);
+    setPendingDeletionId(null);
+  };
   const saveDraftDebts = (): void => {
     setDebts(draftDebts);
     setEditing(false);
+    setPendingDeletionId(null);
     setSaved(true);
     setTimeout(() => setSaved(false), SAVED_MESSAGE_DURATION_MS);
   };
   const discardChanges = (): void => {
     setDraftDebts(debts);
     setEditing(false);
+    setPendingDeletionId(null);
   };
+
+  const renderDeleteAction = (debt: Debt): React.JSX.Element =>
+    pendingDeletionId === debt.id ? (
+      <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
+        <span style={{ fontSize: 11.5, color: palette.sub }}>¿Seguro?</span>
+        <button className="seg" onClick={() => confirmDebtDeletion(debt.id)} style={{ background: palette.bad, borderColor: palette.bad, color: "#fff" }}>Sí</button>
+        <button className="seg" onClick={cancelDebtDeletion}>Cancelar</button>
+      </span>
+    ) : (
+      <button className="seg" onClick={() => requestDebtDeletion(debt.id)} title="Eliminar deuda" style={{ color: palette.bad }}>Eliminar</button>
+    );
 
   return (
     <div className="card span-2">
@@ -83,17 +122,17 @@ export function DebtsSection({ debts, setDebts, portfolioTotal }: DebtsSectionPr
       {sectionOpen && (
         <div style={{ marginTop: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-            <button className="seg on" onClick={() => setEditing(previous => !previous)}>
+            <button className="seg on" onClick={toggleEditing}>
               {editing ? "Cerrar edición" : "Editar deudas"}
             </button>
             {saved && <span style={{ fontSize: 12, color: palette.acc }}>Guardado ✓</span>}
           </div>
 
           {!editing && (
-            debts.length === 0 ? (
+            activeDebts.length === 0 ? (
               <div style={{ fontSize: 12.5, color: palette.faint, marginBottom: 14 }}>Aún no has añadido deudas.</div>
             ) : (
-              debts.map(debt => (
+              activeDebts.map(debt => (
                 <div key={debt.id} style={{ marginBottom: 12, paddingBottom: 12, borderBottom: `1px solid ${palette.line}` }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 8 }}>
                     <div>
@@ -112,10 +151,10 @@ export function DebtsSection({ debts, setDebts, portfolioTotal }: DebtsSectionPr
 
           {editing && (
             <>
-              {draftDebts.length === 0 ? (
+              {activeDebts.length === 0 ? (
                 <div style={{ fontSize: 12.5, color: palette.faint, marginBottom: 14 }}>Aún no has añadido deudas.</div>
               ) : (
-                draftDebts.map(debt => (
+                activeDebts.map(debt => (
                   <div key={debt.id} className="deuda-row" style={{ marginBottom: 12, paddingBottom: 12, borderBottom: `1px solid ${palette.line}` }}>
                     <div>
                       <label>
@@ -135,9 +174,11 @@ export function DebtsSection({ debts, setDebts, portfolioTotal }: DebtsSectionPr
                       <div style={{ fontSize: 10.5, color: palette.faint, marginBottom: 2 }}>Saldo pendiente</div>
                       <input className="inp" type="number" step="any" value={debt.balance} onChange={(event: React.ChangeEvent<HTMLInputElement>) => editDebtBalance(debt.id, event.target.value)} />
                     </label>
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <button className="seg" onClick={() => settleDebt(debt.id)} title="Marcar como liquidada">Liquidar</button>
-                      <button className="seg" onClick={() => removeDebt(debt.id)} title="Eliminar deuda" style={{ color: palette.bad }}>Eliminar</button>
+                    <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                      {pendingDeletionId !== debt.id && (
+                        <button className="seg on" onClick={() => settleDebt(debt.id)} title="Marcar como liquidada">Liquidar</button>
+                      )}
+                      {renderDeleteAction(debt)}
                     </div>
                   </div>
                 ))
@@ -152,9 +193,51 @@ export function DebtsSection({ debts, setDebts, portfolioTotal }: DebtsSectionPr
             </>
           )}
 
+          <div style={{ marginTop: 18, paddingTop: 14, borderTop: `1px solid ${palette.line}` }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+              <button
+                className="eyebrow"
+                onClick={() => setHistoryOpen(previous => !previous)}
+                style={{ background: "none", border: "none", padding: 0, display: "flex", alignItems: "center", gap: 8 }}
+              >
+                <span style={{ display: "inline-block", transition: ".15s", transform: historyOpen ? "rotate(90deg)" : "rotate(0deg)" }}>▸</span>
+                Deudas liquidadas ({settledDebts.length})
+              </button>
+              {settledDebts.length > 0 && (
+                <span className="num" style={{ fontSize: 11.5, color: palette.faint }}>Total saldado: {currencyFormatter.euro(totalSettledBalance)}</span>
+              )}
+            </div>
+
+            {historyOpen && (
+              settledDebts.length === 0 ? (
+                <div style={{ fontSize: 12.5, color: palette.faint, marginTop: 10 }}>Aún no has liquidado deudas.</div>
+              ) : (
+                <div style={{ marginTop: 10 }}>
+                  {settledDebts.map(debt => (
+                    <div key={debt.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, marginBottom: 10, paddingBottom: 10, borderBottom: `1px solid ${palette.line}`, opacity: 0.7 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <span style={{ color: palette.acc }}>✓</span>
+                        <div>
+                          <div style={{ fontSize: 13, color: palette.ink }}>{debt.name}</div>
+                          <div style={{ fontSize: 11, color: palette.faint, marginTop: 2 }}>
+                            Liquidada el {debt.settledAt ? formatSettlementDate(debt.settledAt) : ""}
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                        <span className="num" style={{ color: palette.sub }}>{currencyFormatter.euro(debt.balance)}</span>
+                        {editing && renderDeleteAction(debt)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            )}
+          </div>
+
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginTop: 14 }}>
-            <Metric label="Deuda total" value={currencyFormatter.euro(displayedTotalDebt)} sub="suma de saldos pendientes" />
-            <Metric label="Patrimonio neto" value={currencyFormatter.euro(displayedNetWorth)} sub="activos − deudas" />
+            <Metric label="Deuda total" value={currencyFormatter.euro(displayedTotalDebt)} sub="saldo de deudas activas" />
+            <Metric label="Patrimonio neto" value={currencyFormatter.euro(displayedNetWorth)} sub="activos − deudas activas" />
           </div>
         </div>
       )}

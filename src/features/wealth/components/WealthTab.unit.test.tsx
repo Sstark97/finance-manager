@@ -9,6 +9,7 @@ import type { Position } from "@/features/wealth/domain/types";
 import type { WealthTargets } from "@/features/wealth/domain/WealthTargets";
 import { WEALTH_TARGETS_INITIAL } from "@/features/wealth/data/wealthTargets";
 import { currencyFormatter } from "@/lib/CurrencyFormatter";
+import type { Debt } from "@/shared/domain/types";
 
 const portfolioCalculator = new PortfolioCalculator();
 
@@ -16,7 +17,7 @@ beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false } as Response));
 });
 
-function renderWealthTab(portfolio: Position[], wealthTargets: WealthTargets | null = WEALTH_TARGETS_INITIAL) {
+function renderWealthTab(portfolio: Position[], wealthTargets: WealthTargets | null = WEALTH_TARGETS_INITIAL, debts: Debt[] = []) {
   const setPortfolio = vi.fn();
   const setWealthTargets = vi.fn();
 
@@ -25,7 +26,7 @@ function renderWealthTab(portfolio: Position[], wealthTargets: WealthTargets | n
       portfolio={portfolio}
       setPortfolio={setPortfolio}
       portfolioDerived={portfolioCalculator.derive(portfolio)}
-      debts={[]}
+      debts={debts}
       wealthTargets={wealthTargets}
       setWealthTargets={setWealthTargets}
     />,
@@ -115,5 +116,15 @@ describe("WealthTab", () => {
     await user.click(screen.getByRole("button", { name: "Editar cartera" }));
 
     expect(screen.queryByRole("combobox", { name: "Índice" })).not.toBeInTheDocument();
+  });
+
+  it("should exclude settled debts from the net worth calculation, counting only active ones", () => {
+    const cashPosition: Position = { id: "efectivo-1", name: "Cuenta", ticker: "", type: "efectivo", units: 10000, price: 1, group: "liquidez", equityIndex: null };
+    const activeDebt: Debt = { id: "coche", name: "Coche", installment: 173.28, balance: 3000, note: "" };
+    const settledDebt: Debt = { id: "kindle", name: "Kindle", installment: 44, balance: 132, note: "", settledAt: "2026-06-01" };
+
+    const { container } = renderWealthTab([cashPosition], WEALTH_TARGETS_INITIAL, [activeDebt, settledDebt]);
+
+    expect(container.textContent).toContain(currencyFormatter.euroWithCents(10000 - activeDebt.balance));
   });
 });

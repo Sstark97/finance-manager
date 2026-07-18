@@ -6,7 +6,7 @@ describe("DebtRowMapper", () => {
   const mapper = new DebtRowMapper();
 
   it("should map a row with a deadline into a domain debt with that deadline", () => {
-    const row = { id: "applewatch", userId: "user-1", name: "Apple Watch", installment: 75, balance: 105, note: "Liquidar antes de julio", deadline: "2026-07-10" };
+    const row = { id: "applewatch", userId: "user-1", name: "Apple Watch", installment: 75, balance: 105, note: "Liquidar antes de julio", deadline: "2026-07-10", settledAt: null };
 
     const debt = mapper.toDomain(row);
 
@@ -14,7 +14,7 @@ describe("DebtRowMapper", () => {
   });
 
   it("should map a row without a deadline into a domain debt with an undefined deadline", () => {
-    const row = { id: "kindle", userId: "user-1", name: "Kindle", installment: 44, balance: 132, note: "Liquida en septiembre", deadline: null };
+    const row = { id: "kindle", userId: "user-1", name: "Kindle", installment: 44, balance: 132, note: "Liquida en septiembre", deadline: null, settledAt: null };
 
     const debt = mapper.toDomain(row);
 
@@ -36,5 +36,37 @@ describe("DebtRowMapper", () => {
     const row = mapper.toRow(debt, "user-1");
 
     expect(row.deadline).toBeNull();
+  });
+
+  it("should map a row with a settled_at into a domain debt with that settledAt", () => {
+    const row = { id: "kindle", userId: "user-1", name: "Kindle", installment: 44, balance: 132, note: "Liquidada", deadline: null, settledAt: "2026-06-01" };
+
+    const debt = mapper.toDomain(row);
+
+    expect(debt).toEqual<Debt>({ id: "kindle", name: "Kindle", installment: 44, balance: 132, note: "Liquidada", settledAt: "2026-06-01" });
+  });
+
+  it("should map a row without a settled_at into a domain debt with an undefined settledAt", () => {
+    const row = { id: "coche", userId: "user-1", name: "Coche", installment: 173.28, balance: 8000, note: "En curso", deadline: null, settledAt: null };
+
+    const debt = mapper.toDomain(row);
+
+    expect(debt.settledAt).toBeUndefined();
+  });
+
+  it("should map a domain debt with a settledAt back into a row keeping that settled_at", () => {
+    const debt: Debt = { id: "kindle", name: "Kindle", installment: 44, balance: 132, note: "Liquidada", settledAt: "2026-06-01" };
+
+    const row = mapper.toRow(debt, "user-1");
+
+    expect(row.settledAt).toBe("2026-06-01");
+  });
+
+  it("should map a domain debt without a settledAt back into a row with a null settled_at", () => {
+    const debt: Debt = { id: "coche", name: "Coche", installment: 173.28, balance: 8000, note: "En curso" };
+
+    const row = mapper.toRow(debt, "user-1");
+
+    expect(row.settledAt).toBeNull();
   });
 });

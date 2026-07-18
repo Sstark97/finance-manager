@@ -13,6 +13,7 @@ export class DebtRowMapper {
       balance: row.balance,
       note: row.note,
       deadline: row.deadline ?? undefined,
+      settledAt: row.settledAt ?? undefined,
     };
   }
 
@@ -25,6 +26,7 @@ export class DebtRowMapper {
       balance: debt.balance,
       note: debt.note,
       deadline: debt.deadline ?? null,
+      settledAt: debt.settledAt ?? null,
     };
   }
 }

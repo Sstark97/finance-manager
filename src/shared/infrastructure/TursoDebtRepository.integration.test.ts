@@ -75,4 +75,24 @@ describe("TursoDebtRepository", () => {
     expect(await repository.findAll("user-1")).toEqual([]);
     expect(await repository.findAll("user-2")).toEqual([carLoan]);
   });
+
+  it("should round-trip a settled debt through save and findAll, keeping its settledAt and balance", async () => {
+    const settledKindle: Debt = { id: "kindle", name: "Kindle", installment: 44, balance: 132, note: "Liquidada", settledAt: "2026-06-01" };
+
+    await repository.saveAll("user-1", [settledKindle]);
+    const debts = await repository.findAll("user-1");
+
+    expect(debts).toEqual([settledKindle]);
+  });
+
+  it("should round-trip a mix of active and settled debts for the same user", async () => {
+    const carLoan: Debt = { id: "coche", name: "Coche", installment: 173.28, balance: 8000, note: "En curso" };
+    const settledKindle: Debt = { id: "kindle", name: "Kindle", installment: 44, balance: 132, note: "Liquidada", settledAt: "2026-06-01" };
+
+    await repository.saveAll("user-1", [carLoan, settledKindle]);
+    const debts = await repository.findAll("user-1");
+
+    expect(debts).toEqual(expect.arrayContaining([carLoan, settledKindle]));
+    expect(debts).toHaveLength(2);
+  });
 });
