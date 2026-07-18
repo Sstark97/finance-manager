@@ -46,7 +46,7 @@ describe("FinanceAppShell", () => {
   });
 
   it("should render the debts section and update the heading once the Deudas tab is selected", async () => {
-    const debt = { id: "coche", name: "Coche", installment: 173.28, balance: 8000, note: "" };
+    const debt = { id: "coche", name: "Coche", installment: 173.28, balance: 8000, note: "", isLongTerm: false };
     const user = userEvent.setup();
     render(<FinanceAppShell {...BASE_PROPS} initialDebts={[debt]} />);
 

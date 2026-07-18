@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { DebtLedger } from "@/shared/domain/DebtLedger";
 import type { Debt } from "@/shared/domain/types";
 
-const carLoan: Debt = { id: "coche", name: "Coche", installment: 173.28, balance: 8000, note: "En curso" };
-const settledKindle: Debt = { id: "kindle", name: "Kindle", installment: 44, balance: 132, note: "Liquida en septiembre", settledAt: "2026-06-01" };
+const carLoan: Debt = { id: "coche", name: "Coche", installment: 173.28, balance: 8000, note: "En curso", isLongTerm: false };
+const settledKindle: Debt = { id: "kindle", name: "Kindle", installment: 44, balance: 132, note: "Liquida en septiembre", isLongTerm: false, settledAt: "2026-06-01" };
 
 describe("DebtLedger", () => {
   it("should treat a debt without settledAt as active", () => {
@@ -62,7 +62,7 @@ describe("DebtLedger", () => {
   });
 
   it("should leave other debts untouched when settling one of them", () => {
-    const anotherDebt: Debt = { id: "kindle-2", name: "Kindle 2", installment: 20, balance: 60, note: "" };
+    const anotherDebt: Debt = { id: "kindle-2", name: "Kindle 2", installment: 20, balance: 60, note: "", isLongTerm: false };
     const ledger = new DebtLedger([carLoan, anotherDebt]);
 
     const settledLedger = ledger.settle(carLoan.id, "2026-07-18");
@@ -96,60 +96,51 @@ describe("DebtLedger", () => {
   });
 
   describe("totalActiveShortTermBalance and totalActiveLongTermBalance", () => {
-    const referenceDate = new Date("2026-07-18T10:00:00Z");
-    const mortgage: Debt = { id: "hipoteca", name: "Hipoteca", installment: 600, balance: 150000, note: "", deadline: "2040-01-01" };
-    const creditCard: Debt = { id: "tarjeta", name: "Tarjeta", installment: 60, balance: 400, note: "", deadline: "2026-07-25" };
-    const debtWithoutDeadline: Debt = { id: "amigo", name: "Amigo", installment: 30, balance: 150, note: "" };
-    const debtDueInExactlyOneYear: Debt = { id: "prestamo", name: "Préstamo", installment: 90, balance: 2000, note: "", deadline: "2027-07-18" };
+    const mortgage: Debt = { id: "hipoteca", name: "Hipoteca", installment: 600, balance: 150000, note: "", isLongTerm: true };
+    const creditCard: Debt = { id: "tarjeta", name: "Tarjeta", installment: 60, balance: 400, note: "", isLongTerm: false };
+    const debtWithoutDeadline: Debt = { id: "amigo", name: "Amigo", installment: 30, balance: 150, note: "", isLongTerm: false };
 
-    it("should classify a debt with a deadline more than 365 days away as long term", () => {
+    it("should classify a debt marked as long term as long term regardless of its deadline", () => {
       const ledger = new DebtLedger([mortgage]);
 
-      expect(ledger.totalActiveLongTermBalance(referenceDate)).toBe(mortgage.balance);
-      expect(ledger.totalActiveShortTermBalance(referenceDate)).toBe(0);
+      expect(ledger.totalActiveLongTermBalance()).toBe(mortgage.balance);
+      expect(ledger.totalActiveShortTermBalance()).toBe(0);
     });
 
-    it("should classify a debt with a deadline within 365 days as short term", () => {
+    it("should classify a debt not marked as long term as short term", () => {
       const ledger = new DebtLedger([creditCard]);
 
-      expect(ledger.totalActiveShortTermBalance(referenceDate)).toBe(creditCard.balance);
-      expect(ledger.totalActiveLongTermBalance(referenceDate)).toBe(0);
+      expect(ledger.totalActiveShortTermBalance()).toBe(creditCard.balance);
+      expect(ledger.totalActiveLongTermBalance()).toBe(0);
     });
 
-    it("should classify a debt without a deadline as short term", () => {
+    it("should classify a debt without a deadline as short term when not marked long term", () => {
       const ledger = new DebtLedger([debtWithoutDeadline]);
 
-      expect(ledger.totalActiveShortTermBalance(referenceDate)).toBe(debtWithoutDeadline.balance);
-      expect(ledger.totalActiveLongTermBalance(referenceDate)).toBe(0);
-    });
-
-    it("should classify a debt due in exactly 365 days as short term", () => {
-      const ledger = new DebtLedger([debtDueInExactlyOneYear]);
-
-      expect(ledger.totalActiveShortTermBalance(referenceDate)).toBe(debtDueInExactlyOneYear.balance);
-      expect(ledger.totalActiveLongTermBalance(referenceDate)).toBe(0);
+      expect(ledger.totalActiveShortTermBalance()).toBe(debtWithoutDeadline.balance);
+      expect(ledger.totalActiveLongTermBalance()).toBe(0);
     });
 
     it("should split a mixed list of debts between short-term and long-term totals", () => {
       const ledger = new DebtLedger([mortgage, creditCard, debtWithoutDeadline]);
 
-      expect(ledger.totalActiveLongTermBalance(referenceDate)).toBe(mortgage.balance);
-      expect(ledger.totalActiveShortTermBalance(referenceDate)).toBe(creditCard.balance + debtWithoutDeadline.balance);
+      expect(ledger.totalActiveLongTermBalance()).toBe(mortgage.balance);
+      expect(ledger.totalActiveShortTermBalance()).toBe(creditCard.balance + debtWithoutDeadline.balance);
     });
 
     it("should exclude settled long-term debts from the long-term total", () => {
       const settledMortgage: Debt = { ...mortgage, settledAt: "2026-01-01" };
       const ledger = new DebtLedger([settledMortgage]);
 
-      expect(ledger.totalActiveLongTermBalance(referenceDate)).toBe(0);
+      expect(ledger.totalActiveLongTermBalance()).toBe(0);
     });
   });
 
   describe("activeSortedByDeadlineUrgency", () => {
     const referenceDate = new Date("2026-07-18T10:00:00Z");
-    const debtDueSoon: Debt = { id: "tarjeta", name: "Tarjeta", installment: 60, balance: 400, note: "", deadline: "2026-07-25" };
-    const debtDueLater: Debt = { id: "prestamo", name: "Préstamo", installment: 90, balance: 2000, note: "", deadline: "2026-12-01" };
-    const debtWithoutDeadline: Debt = { id: "amigo", name: "Amigo", installment: 30, balance: 150, note: "" };
+    const debtDueSoon: Debt = { id: "tarjeta", name: "Tarjeta", installment: 60, balance: 400, note: "", isLongTerm: false, deadline: "2026-07-25" };
+    const debtDueLater: Debt = { id: "prestamo", name: "Préstamo", installment: 90, balance: 2000, note: "", isLongTerm: false, deadline: "2026-12-01" };
+    const debtWithoutDeadline: Debt = { id: "amigo", name: "Amigo", installment: 30, balance: 150, note: "", isLongTerm: false };
 
     it("should order active debts from the closest deadline to the farthest", () => {
       const ledger = new DebtLedger([debtWithoutDeadline, debtDueLater, debtDueSoon]);

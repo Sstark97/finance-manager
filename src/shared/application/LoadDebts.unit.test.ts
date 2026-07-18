@@ -17,7 +17,7 @@ class FakeDebtRepository implements DebtRepository {
 
 describe("LoadDebts", () => {
   it("should return every debt stored in the repository for the given user", async () => {
-    const carLoan: Debt = { id: "coche", name: "Coche", installment: 173.28, balance: 8000, note: "En curso" };
+    const carLoan: Debt = { id: "coche", name: "Coche", installment: 173.28, balance: 8000, note: "En curso", isLongTerm: false };
     const useCase = new LoadDebts(new FakeDebtRepository({ "user-1": [carLoan] }));
 
     const debts = await useCase.invoke("user-1");
@@ -26,7 +26,7 @@ describe("LoadDebts", () => {
   });
 
   it("should not return debts belonging to a different user", async () => {
-    const carLoan: Debt = { id: "coche", name: "Coche", installment: 173.28, balance: 8000, note: "En curso" };
+    const carLoan: Debt = { id: "coche", name: "Coche", installment: 173.28, balance: 8000, note: "En curso", isLongTerm: false };
     const useCase = new LoadDebts(new FakeDebtRepository({ "user-1": [carLoan] }));
 
     const debts = await useCase.invoke("user-2");

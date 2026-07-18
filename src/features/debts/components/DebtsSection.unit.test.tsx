@@ -7,8 +7,8 @@ import { DebtsSection } from "@/features/debts/components/DebtsSection";
 import type { Debt } from "@/shared/domain/types";
 import { currencyFormatter } from "@/lib/CurrencyFormatter";
 
-const SAMPLE_DEBT: Debt = { id: "coche", name: "Coche", installment: 173.28, balance: 8000, note: "En curso" };
-const SETTLED_DEBT: Debt = { id: "kindle", name: "Kindle", installment: 44, balance: 132, note: "Liquidada", settledAt: "2026-06-01" };
+const SAMPLE_DEBT: Debt = { id: "coche", name: "Coche", installment: 173.28, balance: 8000, note: "En curso", isLongTerm: false };
+const SETTLED_DEBT: Debt = { id: "kindle", name: "Kindle", installment: 44, balance: 132, note: "Liquidada", isLongTerm: false, settledAt: "2026-06-01" };
 
 function StatefulDebtsSection({ initialDebts, onSetDebts }: { initialDebts: Debt[]; onSetDebts: (update: React.SetStateAction<Debt[]>) => void }): React.JSX.Element {
   const [debts, setDebts] = useState<Debt[]>(initialDebts);
@@ -286,12 +286,59 @@ describe("DebtsSection", () => {
   });
 
   it("should list the debt with the closest deadline first", () => {
-    const debtDueSoon: Debt = { id: "urgente", name: "Urgente", installment: 10, balance: 100, note: "", deadline: "2999-01-01" };
-    const debtDueLater: Debt = { id: "lejana", name: "Lejana", installment: 10, balance: 100, note: "", deadline: "2999-12-01" };
+    const debtDueSoon: Debt = { id: "urgente", name: "Urgente", installment: 10, balance: 100, note: "", isLongTerm: false, deadline: "2999-01-01" };
+    const debtDueLater: Debt = { id: "lejana", name: "Lejana", installment: 10, balance: 100, note: "", isLongTerm: false, deadline: "2999-12-01" };
     renderDebtsSection([debtDueLater, debtDueSoon]);
 
     const debtNames = screen.getAllByText(/Urgente|Lejana/).map(element => element.textContent);
     expect(debtNames).toEqual(["Urgente", "Lejana"]);
+  });
+
+  it("should show a long-term badge next to an active debt marked as long term", () => {
+    const mortgage: Debt = { ...SAMPLE_DEBT, isLongTerm: true };
+    renderDebtsSection([mortgage]);
+
+    expect(screen.getByText("Largo plazo")).toBeInTheDocument();
+  });
+
+  it("should not show a long-term badge for an active debt not marked as long term", () => {
+    renderDebtsSection([SAMPLE_DEBT]);
+
+    expect(screen.queryByText("Largo plazo")).not.toBeInTheDocument();
+  });
+
+  it("should expose an unpressed long-term toggle for a debt not marked as long term while editing", async () => {
+    renderDebtsSection([SAMPLE_DEBT]);
+    await enterEditMode();
+
+    expect(screen.getByRole("button", { name: "Largo plazo" })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("should mark a debt as long term once its toggle is pressed", async () => {
+    const { setDebtsSpy } = renderDebtsSection([SAMPLE_DEBT]);
+    await enterEditMode();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Largo plazo" }));
+
+    expect(screen.getByRole("button", { name: "Largo plazo" })).toHaveAttribute("aria-pressed", "true");
+
+    await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+    expect(setDebtsSpy).toHaveBeenCalledWith([{ ...SAMPLE_DEBT, isLongTerm: true }]);
+  });
+
+  it("should default a newly added debt to not long term", async () => {
+    const { setDebtsSpy } = renderDebtsSection([]);
+    await enterEditMode();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "+ Añadir deuda" }));
+    await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+    expect(setDebtsSpy).toHaveBeenCalledTimes(1);
+    const savedDebts = setDebtsSpy.mock.calls[0][0] as Debt[];
+    expect(savedDebts[0].isLongTerm).toBe(false);
   });
 
   it("should expose a date input to set a debt's deadline while editing", async () => {

@@ -21,7 +21,7 @@ describe("SaveDebts", () => {
   it("should persist the given debts for the given user through the repository", async () => {
     const repository = new RecordingDebtRepository();
     const useCase = new SaveDebts(repository);
-    const kindle: Debt = { id: "kindle", name: "Kindle", installment: 44, balance: 132, note: "Liquida en septiembre" };
+    const kindle: Debt = { id: "kindle", name: "Kindle", installment: 44, balance: 132, note: "Liquida en septiembre", isLongTerm: false };
 
     await useCase.invoke("user-1", [kindle]);
 

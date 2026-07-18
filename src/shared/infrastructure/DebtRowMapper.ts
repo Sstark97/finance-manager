@@ -12,6 +12,7 @@ export class DebtRowMapper {
       installment: row.installment,
       balance: row.balance,
       note: row.note,
+      isLongTerm: row.isLongTerm === 1,
       deadline: row.deadline ?? undefined,
       settledAt: row.settledAt ?? undefined,
     };
@@ -25,6 +26,7 @@ export class DebtRowMapper {
       installment: debt.installment,
       balance: debt.balance,
       note: debt.note,
+      isLongTerm: debt.isLongTerm ? 1 : 0,
       deadline: debt.deadline ?? null,
       settledAt: debt.settledAt ?? null,
     };

@@ -8,7 +8,7 @@ const exporter = new FinanceDataExporter();
 
 const cashPosition: Position = { id: "efectivo-1", name: "Cuenta", ticker: "", type: "efectivo", units: 500, price: 1, group: "liquidez", equityIndex: null };
 const fundPosition: Position = { id: "fondo-1", name: "Fidelity World", ticker: "0P0000KSPA.F", type: "fondo", units: 10, price: 20, group: "rv", equityIndex: "world" };
-const carLoan: Debt = { id: "coche", name: "Coche", installment: 173.28, balance: 8000, note: "En curso", deadline: "2026-12-01" };
+const carLoan: Debt = { id: "coche", name: "Coche", installment: 173.28, balance: 8000, note: "En curso", isLongTerm: false, deadline: "2026-12-01" };
 
 const emptyState: FinanceExportState = { portfolio: [], debts: [], baseBudget: null, fixedExpenseItems: [], months: [] };
 

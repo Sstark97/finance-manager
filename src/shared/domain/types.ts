@@ -4,6 +4,7 @@ export interface Debt {
   installment: number;
   balance: number;
   note: string;
+  isLongTerm: boolean;
   deadline?: string;
   settledAt?: string;
 }

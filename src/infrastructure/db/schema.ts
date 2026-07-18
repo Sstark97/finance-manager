@@ -74,6 +74,7 @@ export const debts = sqliteTable(
     note: text("note").notNull(),
     deadline: text("deadline"),
     settledAt: text("settled_at"),
+    isLongTerm: integer("is_long_term").notNull().default(0),
   },
   (table) => [index("debts_user_id_idx").on(table.userId)],
 );

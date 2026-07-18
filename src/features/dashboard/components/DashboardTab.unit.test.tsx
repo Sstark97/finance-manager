@@ -24,16 +24,10 @@ function netWorthCardHeadline(): HTMLElement {
   return card.querySelector(".disp") as HTMLElement;
 }
 
-function farAwayDeadlineIsoDate(): string {
-  const deadline = new Date();
-  deadline.setDate(deadline.getDate() + 400);
-  return deadline.toISOString().slice(0, 10);
-}
-
 describe("DashboardTab", () => {
   it("should show the net worth as the portfolio total minus the active debt balance", () => {
     const portfolioDerived = portfolioCalculator.derive([CASH_POSITION, FUND_POSITION]);
-    const debts: Debt[] = [{ id: "coche", name: "Coche", installment: 173.28, balance: 8000, note: "" }];
+    const debts: Debt[] = [{ id: "coche", name: "Coche", installment: 173.28, balance: 8000, note: "", isLongTerm: false }];
 
     render(
       <DashboardTab
@@ -48,7 +42,7 @@ describe("DashboardTab", () => {
 
   it("should exclude a settled debt from the net worth calculation", () => {
     const portfolioDerived = portfolioCalculator.derive([CASH_POSITION]);
-    const debts: Debt[] = [{ id: "coche", name: "Coche", installment: 173.28, balance: 8000, note: "", settledAt: "2026-01-01" }];
+    const debts: Debt[] = [{ id: "coche", name: "Coche", installment: 173.28, balance: 8000, note: "", isLongTerm: false, settledAt: "2026-01-01" }];
 
     render(
       <DashboardTab
@@ -88,7 +82,7 @@ describe("DashboardTab", () => {
 
   it("should not subtract a long-term debt from the headline net worth", () => {
     const portfolioDerived = portfolioCalculator.derive([CASH_POSITION]);
-    const mortgage: Debt = { id: "hipoteca", name: "Hipoteca", installment: 600, balance: 150000, note: "", deadline: farAwayDeadlineIsoDate() };
+    const mortgage: Debt = { id: "hipoteca", name: "Hipoteca", installment: 600, balance: 150000, note: "", isLongTerm: true };
 
     render(
       <DashboardTab
@@ -102,7 +96,7 @@ describe("DashboardTab", () => {
 
   it("should show the net worth including all debt as a small subtitle", () => {
     const portfolioDerived = portfolioCalculator.derive([CASH_POSITION]);
-    const mortgage: Debt = { id: "hipoteca", name: "Hipoteca", installment: 600, balance: 150000, note: "", deadline: farAwayDeadlineIsoDate() };
+    const mortgage: Debt = { id: "hipoteca", name: "Hipoteca", installment: 600, balance: 150000, note: "", isLongTerm: true };
 
     render(
       <DashboardTab
@@ -160,5 +154,44 @@ describe("DashboardTab", () => {
     );
 
     expect(screen.queryByText("Registra algún mes en Presupuesto para ver aquí su evolución.")).not.toBeInTheDocument();
+  });
+
+  it("should warn that the surplus trend is incomplete when only one month has been registered", () => {
+    const portfolioDerived = portfolioCalculator.derive([]);
+    const month: Month = monthFactory.createCurrent();
+
+    render(
+      <DashboardTab
+        portfolioDerived={portfolioDerived} debts={[]} baseBudget={SAMPLE_BUDGET} months={[month]}
+        goalsSettings={null} wealthTargets={null}
+      />,
+    );
+
+    expect(screen.getByText("Necesitas al menos 2 meses registrados para ver la tendencia.")).toBeInTheDocument();
+  });
+
+  it("should not warn about an incomplete surplus trend once two or more months have been registered", () => {
+    const portfolioDerived = portfolioCalculator.derive([]);
+    const firstMonth: Month = monthFactory.create(2026, 5);
+    const secondMonth: Month = monthFactory.create(2026, 6);
+
+    render(
+      <DashboardTab
+        portfolioDerived={portfolioDerived} debts={[]} baseBudget={SAMPLE_BUDGET} months={[firstMonth, secondMonth]}
+        goalsSettings={null} wealthTargets={null}
+      />,
+    );
+
+    expect(screen.queryByText("Necesitas al menos 2 meses registrados para ver la tendencia.")).not.toBeInTheDocument();
+  });
+
+  it("should not warn about an incomplete surplus trend when there is no surplus history at all", () => {
+    const portfolioDerived = portfolioCalculator.derive([]);
+
+    render(
+      <DashboardTab portfolioDerived={portfolioDerived} debts={[]} baseBudget={null} months={[]} goalsSettings={null} wealthTargets={null} />,
+    );
+
+    expect(screen.queryByText("Necesitas al menos 2 meses registrados para ver la tendencia.")).not.toBeInTheDocument();
   });
 });

@@ -79,10 +79,12 @@ export function DebtsSection({ debts, setDebts, portfolioTotal }: DebtsSectionPr
     setDraftDebts(list => list.map(debt => (debt.id === id ? { ...debt, balance: parseFloat(value) || 0 } : debt)));
   const editDebtDeadline = (id: string, value: string): void =>
     setDraftDebts(list => list.map(debt => (debt.id === id ? { ...debt, deadline: value === "" ? undefined : value } : debt)));
+  const toggleDebtIsLongTerm = (id: string): void =>
+    setDraftDebts(list => list.map(debt => (debt.id === id ? { ...debt, isLongTerm: !debt.isLongTerm } : debt)));
   const settleDebt = (id: string): void =>
     setDraftDebts(list => new DebtLedger(list).settle(id, todayIsoDate()).all());
   const addDebt = (): void =>
-    setDraftDebts(list => [...list, { id: idGenerator.generate(), name: "Nueva deuda", installment: 0, balance: 0, note: "" }]);
+    setDraftDebts(list => [...list, { id: idGenerator.generate(), name: "Nueva deuda", installment: 0, balance: 0, note: "", isLongTerm: false }]);
 
   const requestDebtDeletion = (id: string): void => setPendingDeletionId(id);
   const cancelDebtDeletion = (): void => setPendingDeletionId(null);
@@ -158,6 +160,11 @@ export function DebtsSection({ debts, setDebts, portfolioTotal }: DebtsSectionPr
                       {debt.note && <div style={{ fontSize: 11.5, color: palette.faint, marginTop: 2 }}>{debt.note}</div>}
                     </div>
                     <div className="num" style={{ display: "flex", alignItems: "center", gap: 16, fontSize: 12.5 }}>
+                      {debt.isLongTerm && (
+                        <span style={{ fontSize: 11, fontWeight: 600, color: palette.faint, border: `1px solid ${palette.line}`, borderRadius: 999, padding: "2px 8px", whiteSpace: "nowrap" }}>
+                          Largo plazo
+                        </span>
+                      )}
                       {debt.deadline && <DeadlineBadge deadlineIsoDate={debt.deadline} />}
                       <span style={{ color: palette.sub }}>Cuota {currencyFormatter.euro(debt.installment)}/mes</span>
                       <span style={{ color: palette.ink, fontWeight: 600 }}>{currencyFormatter.euro(debt.balance)}</span>
@@ -198,6 +205,14 @@ export function DebtsSection({ debts, setDebts, portfolioTotal }: DebtsSectionPr
                       <input className="inp" type="date" value={debt.deadline ?? ""} onChange={(event: React.ChangeEvent<HTMLInputElement>) => editDebtDeadline(debt.id, event.target.value)} />
                     </label>
                     <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                      <button
+                        className={`seg ${debt.isLongTerm ? "on" : ""}`}
+                        onClick={() => toggleDebtIsLongTerm(debt.id)}
+                        aria-pressed={debt.isLongTerm}
+                        title="Excluir del patrimonio neto principal (hipoteca, préstamo familiar...)"
+                      >
+                        Largo plazo
+                      </button>
                       {pendingDeletionId !== debt.id && (
                         <button className="seg on" onClick={() => settleDebt(debt.id)} title="Marcar como liquidada">Liquidar</button>
                       )}

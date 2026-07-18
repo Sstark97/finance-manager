@@ -8,7 +8,7 @@ import type { WealthTargets } from "@/features/wealth/domain/WealthTargets";
 
 function buildDependencies(overrides: Partial<LoadInitialAppStateDependencies> = {}): LoadInitialAppStateDependencies {
   const portfolio: Position[] = [{ id: "btc", name: "Bitcoin", ticker: "BTC-EUR", type: "cripto", units: 0.003441, price: 60848, group: "btc", equityIndex: null }];
-  const debts: Debt[] = [{ id: "coche", name: "Coche", installment: 173.28, balance: 8000, note: "En curso" }];
+  const debts: Debt[] = [{ id: "coche", name: "Coche", installment: 173.28, balance: 8000, note: "En curso", isLongTerm: false }];
   const budget: BudgetSnapshot = {
     baseBudget: { ingresoNeto: 1766, gastosFijos: 778.89, inversion: 293, fondoEmergencia: 325, ocio: 270, caprichos: 100 },
     fixedExpenseItems: [], months: [],

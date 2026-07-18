@@ -32,10 +32,9 @@ export class DashboardSummaryCalculator {
     goalsSettings: GoalsSettings | null,
     wealthTargets: WealthTargets | null,
   ): DashboardSummary {
-    const referenceDate = new Date();
     const debtLedger = new DebtLedger(debts);
-    const shortTermDebt = debtLedger.totalActiveShortTermBalance(referenceDate);
-    const longTermDebt = debtLedger.totalActiveLongTermBalance(referenceDate);
+    const shortTermDebt = debtLedger.totalActiveShortTermBalance();
+    const longTermDebt = debtLedger.totalActiveLongTermBalance();
     const netWorth = netWorthCalculator.calculate(portfolioDerived.total, shortTermDebt, longTermDebt);
 
     const currentMonth = this.mostRecentAvailableMonth(months);

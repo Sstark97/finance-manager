@@ -1,0 +1,1 @@
+ALTER TABLE `debts` ADD `is_long_term` integer DEFAULT 0 NOT NULL;

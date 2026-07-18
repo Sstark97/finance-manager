@@ -14,7 +14,7 @@ describe("DashboardSummaryCalculator", () => {
 
   it("should compute net worth as portfolio total minus active debt balance", () => {
     const portfolioDerived = portfolioCalculator.derive([CASH_POSITION]);
-    const debts: Debt[] = [{ id: "coche", name: "Coche", installment: 173.28, balance: 8000, note: "" }];
+    const debts: Debt[] = [{ id: "coche", name: "Coche", installment: 173.28, balance: 8000, note: "", isLongTerm: false }];
 
     const summary = calculator.summarize(portfolioDerived, debts, null, [], null, null);
 
@@ -23,29 +23,25 @@ describe("DashboardSummaryCalculator", () => {
 
   it("should exclude a settled debt from the net worth calculation", () => {
     const portfolioDerived = portfolioCalculator.derive([CASH_POSITION]);
-    const debts: Debt[] = [{ id: "coche", name: "Coche", installment: 173.28, balance: 8000, note: "", settledAt: "2026-01-01" }];
+    const debts: Debt[] = [{ id: "coche", name: "Coche", installment: 173.28, balance: 8000, note: "", isLongTerm: false, settledAt: "2026-01-01" }];
 
     const summary = calculator.summarize(portfolioDerived, debts, null, [], null, null);
 
     expect(summary.netWorth.netWorth).toBe(portfolioDerived.total);
   });
 
-  it("should not subtract a long-term debt from the headline net worth", () => {
+  it("should not subtract a debt marked as long term from the headline net worth", () => {
     const portfolioDerived = portfolioCalculator.derive([CASH_POSITION]);
-    const farAwayDeadline = new Date();
-    farAwayDeadline.setDate(farAwayDeadline.getDate() + 400);
-    const mortgage: Debt = { id: "hipoteca", name: "Hipoteca", installment: 600, balance: 150000, note: "", deadline: farAwayDeadline.toISOString().slice(0, 10) };
+    const mortgage: Debt = { id: "hipoteca", name: "Hipoteca", installment: 600, balance: 150000, note: "", isLongTerm: true };
 
     const summary = calculator.summarize(portfolioDerived, [mortgage], null, [], null, null);
 
     expect(summary.netWorth.netWorth).toBe(portfolioDerived.total);
   });
 
-  it("should still reflect a long-term debt in the net worth including all debt", () => {
+  it("should still reflect a debt marked as long term in the net worth including all debt", () => {
     const portfolioDerived = portfolioCalculator.derive([CASH_POSITION]);
-    const farAwayDeadline = new Date();
-    farAwayDeadline.setDate(farAwayDeadline.getDate() + 400);
-    const mortgage: Debt = { id: "hipoteca", name: "Hipoteca", installment: 600, balance: 150000, note: "", deadline: farAwayDeadline.toISOString().slice(0, 10) };
+    const mortgage: Debt = { id: "hipoteca", name: "Hipoteca", installment: 600, balance: 150000, note: "", isLongTerm: true };
 
     const summary = calculator.summarize(portfolioDerived, [mortgage], null, [], null, null);
 

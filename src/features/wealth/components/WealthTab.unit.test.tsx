@@ -120,8 +120,8 @@ describe("WealthTab", () => {
 
   it("should exclude settled debts from the net worth calculation, counting only active ones", () => {
     const cashPosition: Position = { id: "efectivo-1", name: "Cuenta", ticker: "", type: "efectivo", units: 10000, price: 1, group: "liquidez", equityIndex: null };
-    const activeDebt: Debt = { id: "coche", name: "Coche", installment: 173.28, balance: 3000, note: "" };
-    const settledDebt: Debt = { id: "kindle", name: "Kindle", installment: 44, balance: 132, note: "", settledAt: "2026-06-01" };
+    const activeDebt: Debt = { id: "coche", name: "Coche", installment: 173.28, balance: 3000, note: "", isLongTerm: false };
+    const settledDebt: Debt = { id: "kindle", name: "Kindle", installment: 44, balance: 132, note: "", isLongTerm: false, settledAt: "2026-06-01" };
 
     const { container } = renderWealthTab([cashPosition], WEALTH_TARGETS_INITIAL, [activeDebt, settledDebt]);
 
