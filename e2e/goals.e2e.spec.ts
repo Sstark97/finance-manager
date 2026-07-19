@@ -4,8 +4,7 @@ const PERSIST_SETTLE_MS = 1500;
 
 test.describe("Goals tab persistence", () => {
   test("should persist an edited annual salary after reloading the page", async ({ page }) => {
-    await page.goto("/");
-    await page.getByRole("button", { name: "Metas" }).click();
+    await page.goto("/goals");
 
     const annualSalaryInput = page.getByRole("spinbutton", { name: "Salario bruto anual actual" });
     await expect(annualSalaryInput).toBeVisible();
@@ -17,7 +16,6 @@ test.describe("Goals tab persistence", () => {
     await page.waitForTimeout(PERSIST_SETTLE_MS);
     await page.reload();
 
-    await page.getByRole("button", { name: "Metas" }).click();
     await expect(page.getByRole("spinbutton", { name: "Salario bruto anual actual" })).toHaveValue(editedAnnualSalary);
   });
 });

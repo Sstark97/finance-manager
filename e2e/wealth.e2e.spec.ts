@@ -4,7 +4,7 @@ const PERSIST_SETTLE_MS = 1500;
 
 test.describe("Wealth tab persistence", () => {
   test("should persist an edited position name after reloading the page", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/wealth");
 
     // The wealth tab refreshes prices from Yahoo on mount, which replaces the whole
     // portfolio array from a pre-mount snapshot. Waiting for that first round trip to
@@ -35,7 +35,7 @@ test.describe("Wealth tab persistence", () => {
 
 test.describe("Wealth targets persistence", () => {
   test("should persist an edited emergency fund target after reloading the page", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/wealth");
 
     await page.getByRole("button", { name: "Editar objetivos" }).click();
 
