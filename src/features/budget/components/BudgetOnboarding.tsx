@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { palette } from "@/lib/theme";
 import { currencyFormatter } from "@/lib/CurrencyFormatter";
 import { idGenerator } from "@/lib/IdGenerator";
+import { OnboardingCard } from "@/shared/ui/OnboardingCard";
 import type { CategoryId, FixedExpenseItem, Budget, BudgetDraft } from "@/features/budget/domain/types";
 import { CATEGORIES } from "@/features/budget/domain/config";
 
@@ -47,16 +48,23 @@ export function BudgetOnboarding({ onCreateBudget }: BudgetOnboardingProps): Rea
     }, draft.fixedExpenseItems);
   };
 
+  const unassignedFooter = (
+    <div className="num" style={{ fontSize:12.5 }}>
+      <span style={{ color:palette.sub }}>Sin asignar: </span>
+      <span style={{ color: Math.abs(unassigned) < 5 ? palette.acc : palette.warn, fontWeight:600 }}>{currencyFormatter.euroWithCents(unassigned)}</span>
+      <span style={{ color:palette.faint }}> {Math.abs(unassigned) < 5 ? "(cuadra con el ingreso neto)" : "(revisa: no cuadra con el ingreso neto)"}</span>
+    </div>
+  );
+
   return (
     <div className="grid" style={{ gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,340px),1fr))" }}>
-      <div className="card span-full">
-        <div className="eyebrow" style={{ marginBottom:6 }}>Configura tu presupuesto</div>
-        <p style={{ margin:"0 0 16px", fontSize:12.5, color:palette.sub, lineHeight:1.5 }}>
-          Aún no tienes un presupuesto guardado. Define tu ingreso neto mensual y el reparto por categorías: será tu
-          plantilla base para cada mes. Al guardar se crea también el mes actual para que empieces a registrar tus
-          gastos reales.
-        </p>
-
+      <OnboardingCard
+        title="Configura tu presupuesto"
+        description="Aún no tienes un presupuesto guardado. Define tu ingreso neto mensual y el reparto por categorías: será tu plantilla base para cada mes. Al guardar se crea también el mes actual para que empieces a registrar tus gastos reales."
+        ctaLabel="Crear mi presupuesto"
+        onConfirm={createBudget}
+        footer={unassignedFooter}
+      >
         <div className="grid" style={{ gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))" }}>
           <label>
             <div style={{ fontSize:11, color:palette.sub, marginBottom:3 }}>Ingreso neto /mes</div>
@@ -89,16 +97,7 @@ export function BudgetOnboarding({ onCreateBudget }: BudgetOnboardingProps): Rea
           </div>
           <div style={{ fontSize:11.5, color:palette.faint, marginTop:10 }}>El total de estas partidas será el número de &quot;Gastos fijos&quot; que se usa en toda la pestaña de Presupuesto.</div>
         </div>
-
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:10, marginTop:16, paddingTop:16, borderTop:`1px solid ${palette.line}` }}>
-          <div className="num" style={{ fontSize:12.5 }}>
-            <span style={{ color:palette.sub }}>Sin asignar: </span>
-            <span style={{ color: Math.abs(unassigned) < 5 ? palette.acc : palette.warn, fontWeight:600 }}>{currencyFormatter.euroWithCents(unassigned)}</span>
-            <span style={{ color:palette.faint }}> {Math.abs(unassigned) < 5 ? "(cuadra con el ingreso neto)" : "(revisa: no cuadra con el ingreso neto)"}</span>
-          </div>
-          <button className="seg on" onClick={createBudget}>Crear mi presupuesto</button>
-        </div>
-      </div>
+      </OnboardingCard>
     </div>
   );
 }

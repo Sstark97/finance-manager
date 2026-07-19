@@ -1,16 +1,25 @@
 // @vitest-environment jsdom
 import React from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { SettingsMenu } from "@/app/SettingsMenu";
+import { SettingsMenu } from "@/shared/ui/SettingsMenu";
+import { exportFinanceData } from "@/app/actions/exportFinanceData";
+import { browserFileDownloader } from "@/shared/infrastructure/BrowserFileDownloader";
+import { signOutAction } from "@/app/actions/authSession";
+
+vi.mock("@/app/actions/exportFinanceData", () => ({
+  exportFinanceData: vi.fn().mockResolvedValue({ json: "{}", csv: "Cartera\n" }),
+}));
+vi.mock("@/shared/infrastructure/BrowserFileDownloader", () => ({ browserFileDownloader: { download: vi.fn() } }));
+vi.mock("@/app/actions/authSession", () => ({ signOutAction: vi.fn().mockResolvedValue(undefined) }));
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 function renderSettingsMenu() {
-  const onExportJson = vi.fn();
-  const onExportCsv = vi.fn();
-  const onSignOut = vi.fn();
-  render(<SettingsMenu userEmail="owner@example.com" onExportJson={onExportJson} onExportCsv={onExportCsv} onSignOut={onSignOut} />);
-  return { onExportJson, onExportCsv, onSignOut };
+  return render(<SettingsMenu userEmail="owner@example.com" />);
 }
 
 describe("SettingsMenu", () => {
@@ -42,25 +51,42 @@ describe("SettingsMenu", () => {
     expect(within(menu).getByRole("menuitem", { name: "Cerrar sesión" })).toBeInTheDocument();
   });
 
-  it("should invoke onExportJson and close the menu when Exportar JSON is selected", async () => {
-    const { onExportJson } = renderSettingsMenu();
+  it("should fetch and download the exported JSON when Exportar JSON is selected", async () => {
+    renderSettingsMenu();
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Ajustes" }));
 
     await user.click(screen.getByRole("menuitem", { name: "Exportar JSON" }));
 
-    expect(onExportJson).toHaveBeenCalledTimes(1);
+    expect(exportFinanceData).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => {
+      expect(browserFileDownloader.download).toHaveBeenCalledWith("finanzas.json", "{}", "application/json");
+    });
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });
 
-  it("should invoke onSignOut and close the menu when Cerrar sesión is selected", async () => {
-    const { onSignOut } = renderSettingsMenu();
+  it("should fetch and download the exported CSV when Exportar CSV is selected", async () => {
+    renderSettingsMenu();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Ajustes" }));
+
+    await user.click(screen.getByRole("menuitem", { name: "Exportar CSV" }));
+
+    expect(exportFinanceData).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => {
+      expect(browserFileDownloader.download).toHaveBeenCalledWith("finanzas.csv", "Cartera\n", "text/csv");
+    });
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+
+  it("should sign the user out and close the menu when Cerrar sesión is selected", async () => {
+    renderSettingsMenu();
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Ajustes" }));
 
     await user.click(screen.getByRole("menuitem", { name: "Cerrar sesión" }));
 
-    expect(onSignOut).toHaveBeenCalledTimes(1);
+    expect(signOutAction).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });
 
@@ -68,7 +94,7 @@ describe("SettingsMenu", () => {
     render(
       <div>
         <button type="button">Fuera</button>
-        <SettingsMenu userEmail="owner@example.com" onExportJson={vi.fn()} onExportCsv={vi.fn()} onSignOut={vi.fn()} />
+        <SettingsMenu userEmail="owner@example.com" />
       </div>,
     );
     const user = userEvent.setup();

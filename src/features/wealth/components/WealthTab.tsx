@@ -10,7 +10,7 @@ import { idGenerator } from "@/lib/IdGenerator";
 import type { Position, PositionType, CompositionItem, EquityIndexKey } from "@/features/wealth/domain/types";
 import { COMPOSITIONS } from "@/features/wealth/domain/config";
 import type { WealthTargets } from "@/features/wealth/domain/WealthTargets";
-import type { PortfolioDerived } from "@/features/wealth/domain/PortfolioCalculator";
+import { portfolioCalculator } from "@/features/wealth/domain/PortfolioCalculator";
 import { wealthThresholdEvaluator } from "@/features/wealth/domain/WealthThresholdEvaluator";
 import type { PositionPricingResult } from "@/features/wealth/application/RefreshPositionPrices";
 import type { Debt } from "@/shared/domain/types";
@@ -18,6 +18,8 @@ import { DebtLedger } from "@/shared/domain/DebtLedger";
 import { Metric } from "@/shared/ui/Metric";
 import { WealthTargetsOnboarding } from "@/features/wealth/components/WealthTargetsOnboarding";
 import { WealthEvolutionChart, type WealthEvolutionSummary } from "@/features/wealth/components/WealthEvolutionChart";
+import { savePortfolio } from "@/app/actions/savePortfolio";
+import { saveWealthTargets } from "@/app/actions/saveWealthTargets";
 
 interface Alert {
   kind: "good" | "warn" | "bad";
@@ -27,12 +29,9 @@ interface Alert {
 type CompositionView = "countries" | "sectors";
 
 export interface WealthTabProps {
-  portfolio: Position[];
-  setPortfolio: React.Dispatch<React.SetStateAction<Position[]>>;
-  portfolioDerived: PortfolioDerived;
+  initialPortfolio: Position[];
+  initialWealthTargets: WealthTargets | null;
   debts: Debt[];
-  wealthTargets: WealthTargets | null;
-  setWealthTargets: React.Dispatch<React.SetStateAction<WealthTargets | null>>;
 }
 
 type EditablePositionField = "name" | "type" | "ticker" | "units" | "price";
@@ -41,8 +40,48 @@ const EQUITY_INDEX_LABEL: Record<EquityIndexKey, string> = { world: "World", em:
 const EQUITY_INDEX_OPTIONS: EquityIndexKey[] = ["world", "em", "nasdaq"];
 
 const PRICE_POLL_INTERVAL_MS = 15 * 60 * 1000;
+const PERSIST_DEBOUNCE_MS = 800;
 
-export function WealthTab({ portfolio, setPortfolio, portfolioDerived, debts, wealthTargets, setWealthTargets }: WealthTabProps): React.JSX.Element {
+export function WealthTab({ initialPortfolio, initialWealthTargets, debts }: WealthTabProps): React.JSX.Element {
+  const [portfolio, setPortfolio] = useState<Position[]>(initialPortfolio);
+  const [wealthTargets, setWealthTargets] = useState<WealthTargets | null>(initialWealthTargets);
+  const portfolioDerived = portfolioCalculator.derive(portfolio);
+
+  const pendingPortfolioFlush = useRef<(() => void) | null>(null);
+  const pendingWealthTargetsFlush = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    return () => {
+      pendingPortfolioFlush.current?.();
+      pendingWealthTargetsFlush.current?.();
+    };
+  }, []);
+
+  const isFirstPortfolioRun = useRef(true);
+  useEffect(() => {
+    if (isFirstPortfolioRun.current) { isFirstPortfolioRun.current = false; return; }
+    const persistPortfolio = (): void => {
+      pendingPortfolioFlush.current = null;
+      savePortfolio(portfolio).catch((error: unknown) => console.error("Failed to persist portfolio", error));
+    };
+    pendingPortfolioFlush.current = persistPortfolio;
+    const timeoutId = setTimeout(persistPortfolio, PERSIST_DEBOUNCE_MS);
+    return () => clearTimeout(timeoutId);
+  }, [portfolio]);
+
+  const isFirstWealthTargetsRun = useRef(true);
+  useEffect(() => {
+    if (isFirstWealthTargetsRun.current) { isFirstWealthTargetsRun.current = false; return; }
+    if (wealthTargets == null) return;
+    const persistWealthTargets = (): void => {
+      pendingWealthTargetsFlush.current = null;
+      saveWealthTargets(wealthTargets).catch((error: unknown) => console.error("Failed to persist wealth targets", error));
+    };
+    pendingWealthTargetsFlush.current = persistWealthTargets;
+    const timeoutId = setTimeout(persistWealthTargets, PERSIST_DEBOUNCE_MS);
+    return () => clearTimeout(timeoutId);
+  }, [wealthTargets]);
+
   const [stagflation, setStagflation] = useState<boolean>(true);
   const [editing, setEditing] = useState<boolean>(false);
   const [editingTargets, setEditingTargets] = useState<boolean>(false);

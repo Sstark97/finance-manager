@@ -9,6 +9,7 @@ import type { CategoryId, FixedExpenseItem, Month, Budget, BudgetDraft } from "@
 import { CATEGORIES } from "@/features/budget/domain/config";
 import { monthFactory } from "@/features/budget/domain/MonthFactory";
 import { BudgetMonthlyBreakdown } from "@/features/budget/components/BudgetMonthlyBreakdown";
+import { SavedToast, SAVED_MESSAGE_DURATION_MS } from "@/shared/ui/SavedToast";
 
 export interface BudgetWorkspaceProps {
   baseBudget: Budget;
@@ -47,7 +48,7 @@ export function BudgetWorkspace({ baseBudget, setBaseBudget, months, setMonths, 
     setFixedExpenseItems(baseDraft.fixedExpenseItems);
     setBaseEditing(false);
     setBaseSaved(true);
-    setTimeout(() => setBaseSaved(false), 2000);
+    setTimeout(() => setBaseSaved(false), SAVED_MESSAGE_DURATION_MS);
   };
 
   const editBaseDraft = (field: EditableBudgetField, value: string): void => setBaseDraft(draft => ({ ...draft, [field]: parseFloat(value) || 0 }));
@@ -75,7 +76,7 @@ export function BudgetWorkspace({ baseBudget, setBaseBudget, months, setMonths, 
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:10, marginBottom:6 }}>
           <div className="eyebrow">Presupuesto base anual</div>
           <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-            {baseSaved && <span style={{ fontSize:12, color:palette.acc }}>Guardado ✓</span>}
+            <SavedToast visible={baseSaved} />
             {!baseEditing && <button className="seg on" onClick={startBaseEditing}>Editar presupuesto</button>}
           </div>
         </div>

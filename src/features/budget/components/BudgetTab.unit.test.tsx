@@ -1,42 +1,40 @@
 // @vitest-environment jsdom
 import React from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { BudgetTab, type BudgetTabProps } from "@/features/budget/components/BudgetTab";
-import type { Budget, FixedExpenseItem, Month } from "@/features/budget/domain/types";
+import type { Budget } from "@/features/budget/domain/types";
 import { monthFactory } from "@/features/budget/domain/MonthFactory";
+import { saveBudget } from "@/app/actions/saveBudget";
 
-function renderBudgetTab(overrides: Partial<Pick<BudgetTabProps, "baseBudget" | "months" | "fixedExpenseItems">> = {}) {
-  const setBaseBudget = vi.fn();
-  const setMonths = vi.fn();
-  const setFixedExpenseItems = vi.fn();
+vi.mock("@/app/actions/saveBudget", () => ({ saveBudget: vi.fn().mockResolvedValue(undefined) }));
 
-  render(
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+function renderBudgetTab(overrides: Partial<Pick<BudgetTabProps, "initialBaseBudget" | "initialMonths" | "initialFixedExpenseItems">> = {}) {
+  return render(
     <BudgetTab
-      baseBudget={overrides.baseBudget ?? null}
-      setBaseBudget={setBaseBudget}
-      months={overrides.months ?? []}
-      setMonths={setMonths}
-      fixedExpenseItems={overrides.fixedExpenseItems ?? []}
-      setFixedExpenseItems={setFixedExpenseItems}
+      initialBaseBudget={overrides.initialBaseBudget ?? null}
+      initialMonths={overrides.initialMonths ?? []}
+      initialFixedExpenseItems={overrides.initialFixedExpenseItems ?? []}
     />,
   );
-
-  return { setBaseBudget, setMonths, setFixedExpenseItems };
 }
 
 const SAMPLE_BUDGET: Budget = { ingresoNeto: 1766, gastosFijos: 778.89, inversion: 293, fondoEmergencia: 325, ocio: 270, caprichos: 100 };
 
 describe("BudgetTab", () => {
-  it("should render the onboarding form instead of crashing when there is no base budget configured yet", () => {
-    renderBudgetTab({ baseBudget: null, months: [] });
+  it("should render the onboarding form when there is no base budget configured yet", () => {
+    renderBudgetTab({ initialBaseBudget: null, initialMonths: [] });
 
     expect(screen.getByText("Configura tu presupuesto")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Crear mi presupuesto" })).toBeInTheDocument();
   });
 
-  it("should not crash and should offer to register the current month when the base budget exists but there are no months yet", () => {
-    renderBudgetTab({ baseBudget: SAMPLE_BUDGET, months: [] });
+  it("should offer to register the current month when the base budget exists but there are no months yet", () => {
+    renderBudgetTab({ initialBaseBudget: SAMPLE_BUDGET, initialMonths: [] });
 
     expect(screen.getByRole("button", { name: "Registrar mes actual" })).toBeInTheDocument();
     expect(screen.queryByText("Cargar información del mes")).not.toBeInTheDocument();
@@ -45,29 +43,60 @@ describe("BudgetTab", () => {
   it("should render the monthly breakdown when both the base budget and at least one month exist", () => {
     const month = monthFactory.create(2026, 5);
 
-    renderBudgetTab({ baseBudget: SAMPLE_BUDGET, months: [month] });
+    renderBudgetTab({ initialBaseBudget: SAMPLE_BUDGET, initialMonths: [month] });
 
     expect(screen.getByText("Cargar información del mes")).toBeInTheDocument();
   });
 
   it("should register the current month when the user confirms the register-month call to action", () => {
-    const { setMonths } = renderBudgetTab({ baseBudget: SAMPLE_BUDGET, months: [] });
+    renderBudgetTab({ initialBaseBudget: SAMPLE_BUDGET, initialMonths: [] });
 
     fireEvent.click(screen.getByRole("button", { name: "Registrar mes actual" }));
 
-    expect(setMonths).toHaveBeenCalledTimes(1);
-    const updater = setMonths.mock.calls[0][0] as (months: Month[]) => Month[];
-    expect(updater([])).toHaveLength(1);
+    expect(screen.getByText("Cargar información del mes")).toBeInTheDocument();
   });
 
   it("should create the base budget and the current month together when the onboarding form is confirmed", () => {
-    const { setBaseBudget, setFixedExpenseItems, setMonths } = renderBudgetTab({ baseBudget: null, months: [] });
+    renderBudgetTab({ initialBaseBudget: null, initialMonths: [] });
 
     fireEvent.click(screen.getByRole("button", { name: "Crear mi presupuesto" }));
 
-    expect(setBaseBudget).toHaveBeenCalledWith({ ingresoNeto: 0, gastosFijos: 0, inversion: 0, fondoEmergencia: 0, ocio: 0, caprichos: 0 });
-    expect(setFixedExpenseItems).toHaveBeenCalledWith([] as FixedExpenseItem[]);
-    const monthsUpdater = setMonths.mock.calls[0][0] as (months: Month[]) => Month[];
-    expect(monthsUpdater([])).toHaveLength(1);
+    expect(screen.queryByText("Configura tu presupuesto")).not.toBeInTheDocument();
+    expect(screen.getByText("Cargar información del mes")).toBeInTheDocument();
+  });
+
+  describe("autosave", () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("should persist the base budget once the debounce window elapses after an edit", async () => {
+      renderBudgetTab({ initialBaseBudget: SAMPLE_BUDGET, initialMonths: [monthFactory.create(2026, 5)] });
+
+      fireEvent.click(screen.getByRole("button", { name: "Editar presupuesto" }));
+      fireEvent.change(screen.getByRole("spinbutton", { name: "Ingreso neto /mes" }), { target: { value: "2000" } });
+      fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+      expect(saveBudget).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(800);
+
+      expect(saveBudget).toHaveBeenCalledWith(expect.objectContaining({ baseBudget: expect.objectContaining({ ingresoNeto: 2000 }) }));
+    });
+
+    it("should flush a pending budget save synchronously when the tab unmounts before the debounce fires", () => {
+      const { unmount } = renderBudgetTab({ initialBaseBudget: SAMPLE_BUDGET, initialMonths: [monthFactory.create(2026, 5)] });
+
+      fireEvent.click(screen.getByRole("button", { name: "Editar presupuesto" }));
+      fireEvent.change(screen.getByRole("spinbutton", { name: "Ingreso neto /mes" }), { target: { value: "2000" } });
+      fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+      unmount();
+
+      expect(saveBudget).toHaveBeenCalledWith(expect.objectContaining({ baseBudget: expect.objectContaining({ ingresoNeto: 2000 }) }));
+    });
   });
 });

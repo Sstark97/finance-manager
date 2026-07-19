@@ -13,6 +13,7 @@ import { monthAvailability } from "@/features/budget/domain/MonthAvailability";
 import { CATEGORIES, CATEGORY_LABEL } from "@/features/budget/domain/config";
 import { monthlyBudgetCalculator } from "@/features/budget/domain/MonthlyBudgetCalculator";
 import { MonthlyRecapCard } from "@/features/budget/components/MonthlyRecapCard";
+import { SavedToast, SAVED_MESSAGE_DURATION_MS } from "@/shared/ui/SavedToast";
 
 export interface BudgetMonthlyBreakdownProps {
   baseBudget: Budget;
@@ -88,7 +89,7 @@ export function BudgetMonthlyBreakdown({ baseBudget, months, setMonths }: Budget
   const saveBreakdown = (): void => {
     setMonths(monthList => monthList.map(item => item.id !== month.id ? item : { ...item, netIncomeOverride: draft.netIncomeOverride, overrides: draft.overrides }));
     setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setTimeout(() => setSaved(false), SAVED_MESSAGE_DURATION_MS);
   };
   const discardChanges = (): void => setDraft({ netIncomeOverride: month.netIncomeOverride, overrides: month.overrides });
 
@@ -244,7 +245,7 @@ export function BudgetMonthlyBreakdown({ baseBudget, months, setMonths }: Budget
         <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:6 }}>
           <button className={`seg ${hasUnsavedChanges ? "on" : ""}`} onClick={saveBreakdown} disabled={!hasUnsavedChanges}>Guardar cambios</button>
           {hasUnsavedChanges && <button className="seg" onClick={discardChanges}>Descartar</button>}
-          {saved && <span style={{ fontSize:12, color:palette.acc }}>Guardado ✓</span>}
+          <SavedToast visible={saved} />
           {!saved && hasUnsavedChanges && <span style={{ fontSize:12, color:palette.warn }}>Cambios sin guardar</span>}
         </div>
 

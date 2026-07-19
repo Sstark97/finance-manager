@@ -1,30 +1,57 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { palette } from "@/lib/theme";
 import { currencyFormatter } from "@/lib/CurrencyFormatter";
 import type { Phase, BtcConditions } from "@/features/goals/domain/types";
 import { FI_GOAL, HOUSING_GOAL, BTC_OP_GOAL, PHASES } from "@/features/goals/domain/config";
-import type { PortfolioDerived } from "@/features/wealth/domain/PortfolioCalculator";
+import { portfolioCalculator } from "@/features/wealth/domain/PortfolioCalculator";
+import type { Position } from "@/features/wealth/domain/types";
 import type { WealthTargets } from "@/features/wealth/domain/WealthTargets";
-import { WEALTH_TARGETS_INITIAL } from "@/features/wealth/data/wealthTargets";
+import { wealthTargetsResolver } from "@/features/wealth/domain/WealthTargetsResolver";
 import { financialProjectionCalculator } from "@/features/goals/domain/FinancialProjectionCalculator";
 import type { GoalsSettings } from "@/features/goals/application/GoalsSettings";
 import { GoalsSettingsOnboarding } from "@/features/goals/components/GoalsSettingsOnboarding";
+import { saveGoalsSettings } from "@/app/actions/saveGoalsSettings";
 
 export interface GoalsTabProps {
-  portfolioDerived: PortfolioDerived;
-  settings: GoalsSettings | null;
-  setSettings: React.Dispatch<React.SetStateAction<GoalsSettings | null>>;
+  portfolio: Position[];
+  initialSettings: GoalsSettings | null;
   wealthTargets: WealthTargets | null;
 }
 
-export function GoalsTab({ portfolioDerived, settings, setSettings, wealthTargets }: GoalsTabProps): React.JSX.Element {
+const PERSIST_DEBOUNCE_MS = 800;
+
+export function GoalsTab({ portfolio, initialSettings, wealthTargets }: GoalsTabProps): React.JSX.Element {
+  const portfolioDerived = portfolioCalculator.derive(portfolio);
+  const [settings, setSettings] = useState<GoalsSettings | null>(initialSettings);
+
+  const pendingGoalsSettingsFlush = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    return () => {
+      pendingGoalsSettingsFlush.current?.();
+    };
+  }, []);
+
+  const isFirstGoalsSettingsRun = useRef(true);
+  useEffect(() => {
+    if (isFirstGoalsSettingsRun.current) { isFirstGoalsSettingsRun.current = false; return; }
+    if (settings == null) return;
+    const persistGoalsSettings = (): void => {
+      pendingGoalsSettingsFlush.current = null;
+      saveGoalsSettings(settings).catch((error: unknown) => console.error("Failed to persist goals settings", error));
+    };
+    pendingGoalsSettingsFlush.current = persistGoalsSettings;
+    const timeoutId = setTimeout(persistGoalsSettings, PERSIST_DEBOUNCE_MS);
+    return () => clearTimeout(timeoutId);
+  }, [settings]);
+
   if (settings == null) {
     return <GoalsSettingsOnboarding onCreateSettings={setSettings} />;
   }
 
-  const effectiveWealthTargets = wealthTargets ?? WEALTH_TARGETS_INITIAL;
+  const effectiveWealthTargets = wealthTargetsResolver.resolve(wealthTargets);
 
   const { currentSalary, fiContribution, fiReturn, btcSavings, btcConditions } = settings;
   const setCurrentSalary = (value: number): void => setSettings(previous => (previous ? { ...previous, currentSalary: value } : previous));

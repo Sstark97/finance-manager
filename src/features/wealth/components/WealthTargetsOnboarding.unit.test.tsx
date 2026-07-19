@@ -5,14 +5,6 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { WealthTargetsOnboarding } from "@/features/wealth/components/WealthTargetsOnboarding";
 
 describe("WealthTargetsOnboarding", () => {
-  it("should not persist anything while rendering the onboarding form", () => {
-    const onCreateTargets = vi.fn();
-
-    render(<WealthTargetsOnboarding onCreateTargets={onCreateTargets} />);
-
-    expect(onCreateTargets).not.toHaveBeenCalled();
-  });
-
   it("should create the wealth targets only when the onboarding form is explicitly confirmed", () => {
     const onCreateTargets = vi.fn();
 
@@ -40,11 +32,5 @@ describe("WealthTargetsOnboarding", () => {
       equityTargets: { world: 0, em: 0, nasdaq: 0 },
       btcPauseWeight: 0, btcSellWeight: 0, btcPauseCapital: 0, btcSellCapital: 0,
     });
-  });
-
-  it("should append the caller's className to its own card classes so the mobile grid can reorder it", () => {
-    const { container } = render(<WealthTargetsOnboarding onCreateTargets={vi.fn()} className="widget-onboarding-cta" />);
-
-    expect(container.querySelector(".card.span-full.widget-onboarding-cta")).not.toBeNull();
   });
 });

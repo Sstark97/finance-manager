@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { palette } from "@/lib/theme";
+import { OnboardingCard } from "@/shared/ui/OnboardingCard";
 import type { GoalsSettings } from "@/features/goals/application/GoalsSettings";
 import { GOALS_SETTINGS_INITIAL } from "@/features/goals/data/goalsSettings";
 
@@ -26,14 +27,12 @@ export function GoalsSettingsOnboarding({ onCreateSettings }: GoalsSettingsOnboa
 
   return (
     <div className="grid" style={{ gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,340px),1fr))" }}>
-      <div className="card span-full">
-        <div className="eyebrow" style={{ marginBottom:6 }}>Configura tus metas</div>
-        <p style={{ margin:"0 0 16px", fontSize:12.5, color:palette.sub, lineHeight:1.5 }}>
-          Aún no has guardado tu configuración de metas. Estos parámetros alimentan la proyección de
-          libertad financiera y la operación Bitcoin. Los valores de ejemplo son solo una sugerencia,
-          no se guardan hasta que confirmes.
-        </p>
-
+      <OnboardingCard
+        title="Configura tus metas"
+        description="Aún no has guardado tu configuración de metas. Estos parámetros alimentan la proyección de libertad financiera y la operación Bitcoin. Los valores de ejemplo son solo una sugerencia, no se guardan hasta que confirmes."
+        ctaLabel="Crear mi configuración de metas"
+        onConfirm={createSettings}
+      >
         <div className="grid" style={{ gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))", marginBottom:18 }}>
           <label>
             <div style={{ fontSize:11, color:palette.sub, marginBottom:3 }}>Salario bruto anual actual</div>
@@ -59,11 +58,7 @@ export function GoalsSettingsOnboarding({ onCreateSettings }: GoalsSettingsOnboa
         <label style={{ display:"flex", alignItems:"center", gap:8, marginBottom:18, fontSize:12.5, color:palette.sub }}>
           <input type="checkbox" checked={dcaActive} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>setDcaActive(event.target.checked)} /> El DCA mensual no se pausa
         </label>
-
-        <div style={{ display:"flex", justifyContent:"flex-end", paddingTop:16, borderTop:`1px solid ${palette.line}` }}>
-          <button className="seg on" onClick={createSettings}>Crear mi configuración de metas</button>
-        </div>
-      </div>
+      </OnboardingCard>
     </div>
   );
 }

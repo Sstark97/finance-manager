@@ -1,39 +1,37 @@
 "use client";
 
 import type React from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { palette } from "@/lib/theme";
 
-export type MobileTabBarItem<TabId extends string> = {
-  id: TabId;
+export interface MobileTabBarItem {
+  href: string;
   label: string;
   icon: (color: string) => React.ReactNode;
-};
-
-export interface MobileTabBarProps<TabId extends string> {
-  items: Array<MobileTabBarItem<TabId>>;
-  activeTabId: TabId;
-  onSelect: (tabId: TabId) => void;
 }
 
-export function MobileTabBar<TabId extends string>({ items, activeTabId, onSelect }: MobileTabBarProps<TabId>): React.JSX.Element {
+export interface MobileTabBarProps {
+  items: MobileTabBarItem[];
+}
+
+export function MobileTabBar({ items }: MobileTabBarProps): React.JSX.Element {
+  const pathname = usePathname();
   return (
-    <nav className="mobile-tabbar" role="tablist" aria-label="Navegación principal">
+    <nav className="mobile-tabbar" aria-label="Navegación principal">
       {items.map(item => {
-        const isActive = item.id === activeTabId;
+        const isActive = item.href === pathname;
         const color = isActive ? palette.acc : palette.faint;
         return (
-          <button
-            key={item.id}
-            id={`mobile-tab-${item.id}`}
-            role="tab"
-            aria-controls="finance-tabpanel"
+          <Link
+            key={item.href}
+            href={item.href}
+            aria-current={isActive ? "page" : undefined}
             className={`mobile-tabbar-btn ${isActive ? "on" : ""}`}
-            onClick={() => onSelect(item.id)}
-            aria-selected={isActive}
           >
             {item.icon(color)}
             <span style={{ color }}>{item.label}</span>
-          </button>
+          </Link>
         );
       })}
     </nav>

@@ -2,16 +2,16 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { palette } from "@/lib/theme";
-import { SettingsIcon } from "@/app/MobileTabBar";
+import { SettingsIcon } from "@/shared/ui/MobileTabBar";
+import { exportFinanceData } from "@/app/actions/exportFinanceData";
+import { browserFileDownloader } from "@/shared/infrastructure/BrowserFileDownloader";
+import { signOutAction } from "@/app/actions/authSession";
 
 export interface SettingsMenuProps {
   userEmail: string;
-  onExportJson: () => void;
-  onExportCsv: () => void;
-  onSignOut: () => void;
 }
 
-export function SettingsMenu({ userEmail, onExportJson, onExportCsv, onSignOut }: SettingsMenuProps): React.JSX.Element {
+export function SettingsMenu({ userEmail }: SettingsMenuProps): React.JSX.Element {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -34,9 +34,22 @@ export function SettingsMenu({ userEmail, onExportJson, onExportCsv, onSignOut }
   }, [isOpen]);
 
   const toggleMenu = (): void => setIsOpen((previous) => !previous);
-  const selectExportJson = (): void => { onExportJson(); setIsOpen(false); };
-  const selectExportCsv = (): void => { onExportCsv(); setIsOpen(false); };
-  const selectSignOut = (): void => { onSignOut(); setIsOpen(false); };
+
+  const exportAsJson = (): void => {
+    void exportFinanceData()
+      .then(({ json }) => browserFileDownloader.download("finanzas.json", json, "application/json"))
+      .catch((error: unknown) => console.error("Failed to export finance data as JSON", error));
+  };
+  const exportAsCsv = (): void => {
+    void exportFinanceData()
+      .then(({ csv }) => browserFileDownloader.download("finanzas.csv", csv, "text/csv"))
+      .catch((error: unknown) => console.error("Failed to export finance data as CSV", error));
+  };
+  const signOut = (): void => { void signOutAction(); };
+
+  const selectExportJson = (): void => { exportAsJson(); setIsOpen(false); };
+  const selectExportCsv = (): void => { exportAsCsv(); setIsOpen(false); };
+  const selectSignOut = (): void => { signOut(); setIsOpen(false); };
 
   const menuItemStyle: React.CSSProperties = {
     justifyContent:"flex-start", border:"none", width:"100%", textAlign:"left", background:"none",

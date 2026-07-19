@@ -1,28 +1,24 @@
 // @vitest-environment jsdom
-import React, { useState } from "react";
-import { describe, expect, it, vi } from "vitest";
+import React from "react";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DebtsSection } from "@/features/debts/components/DebtsSection";
 import type { Debt } from "@/shared/domain/types";
 import { currencyFormatter } from "@/lib/CurrencyFormatter";
+import { saveDebts } from "@/app/actions/saveDebts";
+
+vi.mock("@/app/actions/saveDebts", () => ({ saveDebts: vi.fn().mockResolvedValue(undefined) }));
 
 const SAMPLE_DEBT: Debt = { id: "coche", name: "Coche", installment: 173.28, balance: 8000, note: "En curso", isLongTerm: false };
 const SETTLED_DEBT: Debt = { id: "kindle", name: "Kindle", installment: 44, balance: 132, note: "Liquidada", isLongTerm: false, settledAt: "2026-06-01" };
 
-function StatefulDebtsSection({ initialDebts, onSetDebts }: { initialDebts: Debt[]; onSetDebts: (update: React.SetStateAction<Debt[]>) => void }): React.JSX.Element {
-  const [debts, setDebts] = useState<Debt[]>(initialDebts);
-  const trackedSetDebts = (update: React.SetStateAction<Debt[]>): void => {
-    onSetDebts(update);
-    setDebts(update);
-  };
-  return <DebtsSection debts={debts} setDebts={trackedSetDebts} portfolioTotal={10000} />;
-}
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 function renderDebtsSection(initialDebts: Debt[] = [SAMPLE_DEBT]) {
-  const setDebtsSpy = vi.fn();
-  const view = render(<StatefulDebtsSection initialDebts={initialDebts} onSetDebts={setDebtsSpy} />);
-  return { setDebtsSpy, container: view.container };
+  return render(<DebtsSection initialDebts={initialDebts} portfolioTotal={10000} />);
 }
 
 async function toggleSection(): Promise<void> {
@@ -77,21 +73,24 @@ describe("DebtsSection", () => {
     expect(screen.getByRole("button", { name: "Eliminar" })).toBeInTheDocument();
   });
 
-  it("should not call setDebts while editing a balance in the draft", async () => {
-    const { setDebtsSpy } = renderDebtsSection();
+  it("should keep the draft edit unsaved until Guardar cambios is pressed", async () => {
+    renderDebtsSection();
     await enterEditMode();
 
     const user = userEvent.setup();
     const balanceInput = screen.getByRole("spinbutton", { name: "Saldo pendiente" });
     await user.clear(balanceInput);
     await user.type(balanceInput, "5000");
-
     expect(balanceInput).toHaveValue(5000);
-    expect(setDebtsSpy).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Descartar" }));
+
+    const debtRow = screen.getByText(SAMPLE_DEBT.name).parentElement!.parentElement as HTMLElement;
+    expect(within(debtRow).getByText((_text, element) => element?.textContent === currencyFormatter.euro(SAMPLE_DEBT.balance))).toBeInTheDocument();
   });
 
-  it("should apply the draft to setDebts exactly once when Guardar cambios is pressed, and disable it without changes", async () => {
-    const { setDebtsSpy } = renderDebtsSection();
+  it("should apply the draft to the read-only view exactly once Guardar cambios is pressed, and disable it without changes", async () => {
+    renderDebtsSection();
     await enterEditMode();
 
     expect(screen.getByRole("button", { name: "Guardar cambios" })).toBeDisabled();
@@ -105,8 +104,8 @@ describe("DebtsSection", () => {
     expect(saveButton).toBeEnabled();
     await user.click(saveButton);
 
-    expect(setDebtsSpy).toHaveBeenCalledTimes(1);
-    expect(setDebtsSpy).toHaveBeenCalledWith([{ ...SAMPLE_DEBT, balance: 5000 }]);
+    const debtRow = screen.getByText(SAMPLE_DEBT.name).parentElement!.parentElement as HTMLElement;
+    expect(within(debtRow).getByText((_text, element) => element?.textContent === currencyFormatter.euro(5000))).toBeInTheDocument();
   });
 
   it("should show a saved confirmation after Guardar cambios, even though edit mode closes", async () => {
@@ -123,8 +122,8 @@ describe("DebtsSection", () => {
     expect(screen.getByText("Guardado ✓")).toBeInTheDocument();
   });
 
-  it("should revert the draft without calling setDebts when Descartar is pressed", async () => {
-    const { setDebtsSpy } = renderDebtsSection();
+  it("should revert the draft without persisting the change when Descartar is pressed", async () => {
+    renderDebtsSection();
     await enterEditMode();
 
     const user = userEvent.setup();
@@ -136,51 +135,46 @@ describe("DebtsSection", () => {
     await enterEditMode();
 
     expect(screen.getByRole("spinbutton", { name: "Saldo pendiente" })).toHaveValue(SAMPLE_DEBT.balance);
-    expect(setDebtsSpy).not.toHaveBeenCalled();
   });
 
-  it("should not call setDebts when adding a debt to the draft until Guardar cambios is pressed", async () => {
-    const { setDebtsSpy } = renderDebtsSection([]);
+  it("should not add the debt to the read-only list until Guardar cambios is pressed", async () => {
+    renderDebtsSection([]);
     await enterEditMode();
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "+ Añadir deuda" }));
 
     expect(screen.getByRole("textbox", { name: "Nombre" })).toHaveValue("Nueva deuda");
-    expect(setDebtsSpy).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
 
-    expect(setDebtsSpy).toHaveBeenCalledTimes(1);
-    expect((setDebtsSpy.mock.calls[0][0] as Debt[])).toHaveLength(1);
+    expect(screen.getByText("Nueva deuda")).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Nombre" })).not.toBeInTheDocument();
   });
 
   it("should move a settled debt out of the active draft and into the history as soon as Liquidar is pressed", async () => {
-    const { setDebtsSpy } = renderDebtsSection();
+    renderDebtsSection();
     await enterEditMode();
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Liquidar" }));
 
     expect(screen.queryByRole("textbox", { name: "Nombre" })).not.toBeInTheDocument();
-    expect(setDebtsSpy).not.toHaveBeenCalled();
 
     await openHistory();
     expect(screen.getByText(SAMPLE_DEBT.name)).toBeInTheDocument();
   });
 
   it("should persist the settlement date only once Guardar cambios is pressed", async () => {
-    const { setDebtsSpy } = renderDebtsSection();
+    renderDebtsSection();
     await enterEditMode();
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Liquidar" }));
     await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
 
-    expect(setDebtsSpy).toHaveBeenCalledTimes(1);
-    expect(setDebtsSpy).toHaveBeenCalledWith([
-      expect.objectContaining({ id: SAMPLE_DEBT.id, balance: SAMPLE_DEBT.balance, settledAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/) }),
-    ]);
+    await openHistory();
+    expect(screen.getByText(/Liquidada el/)).toBeInTheDocument();
   });
 
   it("should exclude settled debts from the total debt shown", () => {
@@ -215,8 +209,8 @@ describe("DebtsSection", () => {
     expect(screen.getByText("Aún no has liquidado deudas.")).toBeInTheDocument();
   });
 
-  it("should require a confirmation step before removing an active debt, and not call setDebts on the first click", async () => {
-    const { setDebtsSpy } = renderDebtsSection();
+  it("should require a confirmation step before removing an active debt", async () => {
+    renderDebtsSection();
     await enterEditMode();
 
     const user = userEvent.setup();
@@ -224,7 +218,6 @@ describe("DebtsSection", () => {
 
     expect(screen.getByText("¿Seguro?")).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Nombre" })).toBeInTheDocument();
-    expect(setDebtsSpy).not.toHaveBeenCalled();
   });
 
   it("should cancel the pending deletion without removing the debt when Cancelar is pressed", async () => {
@@ -239,8 +232,8 @@ describe("DebtsSection", () => {
     expect(screen.getByRole("textbox", { name: "Nombre" })).toBeInTheDocument();
   });
 
-  it("should remove the debt from the draft only after the deletion is confirmed with Sí", async () => {
-    const { setDebtsSpy } = renderDebtsSection();
+  it("should remove the debt from the list only after the deletion is confirmed with Sí and saved", async () => {
+    renderDebtsSection();
     await enterEditMode();
 
     const user = userEvent.setup();
@@ -248,16 +241,15 @@ describe("DebtsSection", () => {
     await user.click(screen.getByRole("button", { name: "Sí" }));
 
     expect(screen.queryByRole("textbox", { name: "Nombre" })).not.toBeInTheDocument();
-    expect(setDebtsSpy).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
 
-    expect(setDebtsSpy).toHaveBeenCalledTimes(1);
-    expect(setDebtsSpy).toHaveBeenCalledWith([]);
+    expect(screen.queryByText(SAMPLE_DEBT.name)).not.toBeInTheDocument();
+    expect(screen.getByText("Aún no has añadido deudas.")).toBeInTheDocument();
   });
 
   it("should allow permanently deleting an already settled debt from the history, with the same two-step confirmation", async () => {
-    const { setDebtsSpy } = renderDebtsSection([SETTLED_DEBT]);
+    renderDebtsSection([SETTLED_DEBT]);
     await enterEditMode();
     await openHistory();
 
@@ -269,7 +261,7 @@ describe("DebtsSection", () => {
     expect(screen.queryByText(SETTLED_DEBT.name)).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
-    expect(setDebtsSpy).toHaveBeenCalledWith([]);
+    expect(screen.getByText("Aún no has liquidado deudas.")).toBeInTheDocument();
   });
 
   it("should show a deadline badge next to an active debt that has a deadline", () => {
@@ -314,8 +306,8 @@ describe("DebtsSection", () => {
     expect(screen.getByRole("button", { name: "Largo plazo" })).toHaveAttribute("aria-pressed", "false");
   });
 
-  it("should mark a debt as long term once its toggle is pressed", async () => {
-    const { setDebtsSpy } = renderDebtsSection([SAMPLE_DEBT]);
+  it("should mark a debt as long term once its toggle is pressed and saved", async () => {
+    renderDebtsSection([SAMPLE_DEBT]);
     await enterEditMode();
 
     const user = userEvent.setup();
@@ -325,20 +317,19 @@ describe("DebtsSection", () => {
 
     await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
 
-    expect(setDebtsSpy).toHaveBeenCalledWith([{ ...SAMPLE_DEBT, isLongTerm: true }]);
+    expect(screen.getByText("Largo plazo")).toBeInTheDocument();
   });
 
   it("should default a newly added debt to not long term", async () => {
-    const { setDebtsSpy } = renderDebtsSection([]);
+    renderDebtsSection([]);
     await enterEditMode();
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "+ Añadir deuda" }));
     await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
 
-    expect(setDebtsSpy).toHaveBeenCalledTimes(1);
-    const savedDebts = setDebtsSpy.mock.calls[0][0] as Debt[];
-    expect(savedDebts[0].isLongTerm).toBe(false);
+    expect(screen.getByText("Nueva deuda")).toBeInTheDocument();
+    expect(screen.queryByText("Largo plazo")).not.toBeInTheDocument();
   });
 
   it("should expose a date input to set a debt's deadline while editing", async () => {
@@ -351,7 +342,7 @@ describe("DebtsSection", () => {
   });
 
   it("should persist the deadline entered in edit mode once saved", async () => {
-    const { setDebtsSpy } = renderDebtsSection();
+    renderDebtsSection();
     await enterEditMode();
 
     const user = userEvent.setup();
@@ -359,7 +350,7 @@ describe("DebtsSection", () => {
     await user.type(deadlineInput, "2026-12-01");
     await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
 
-    expect(setDebtsSpy).toHaveBeenCalledWith([{ ...SAMPLE_DEBT, deadline: "2026-12-01" }]);
+    expect(screen.getByRole("status")).toBeInTheDocument();
   });
 
   it("should announce the debts section as expanded by default, and collapsed once toggled", async () => {
@@ -384,6 +375,45 @@ describe("DebtsSection", () => {
       renderDebtsSection([SETTLED_DEBT]);
 
       expect(screen.getByText("Sin deudas activas que proyectar.")).toBeInTheDocument();
+    });
+  });
+
+  describe("autosave", () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("should persist the saved draft once the debounce window elapses", async () => {
+      renderDebtsSection();
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      await user.click(screen.getByRole("button", { name: "Editar deudas" }));
+      const balanceInput = screen.getByRole("spinbutton", { name: "Saldo pendiente" });
+      await user.clear(balanceInput);
+      await user.type(balanceInput, "5000");
+      await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+      expect(saveDebts).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(800);
+
+      expect(saveDebts).toHaveBeenCalledWith([{ ...SAMPLE_DEBT, balance: 5000 }]);
+    });
+
+    it("should flush a pending debts save synchronously when the section unmounts before the debounce fires", async () => {
+      const { unmount } = renderDebtsSection();
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      await user.click(screen.getByRole("button", { name: "Editar deudas" }));
+      const balanceInput = screen.getByRole("spinbutton", { name: "Saldo pendiente" });
+      await user.clear(balanceInput);
+      await user.type(balanceInput, "5000");
+      await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+      unmount();
+
+      expect(saveDebts).toHaveBeenCalledWith([{ ...SAMPLE_DEBT, balance: 5000 }]);
     });
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { palette } from "@/lib/theme";
 import { currencyFormatter } from "@/lib/CurrencyFormatter";
 import { idGenerator } from "@/lib/IdGenerator";
@@ -9,14 +9,15 @@ import { DebtLedger } from "@/shared/domain/DebtLedger";
 import { DebtDeadline } from "@/shared/domain/DebtDeadline";
 import { Metric } from "@/shared/ui/Metric";
 import { DebtProjectionChart } from "@/features/debts/components/DebtProjectionChart";
+import { SavedToast, SAVED_MESSAGE_DURATION_MS } from "@/shared/ui/SavedToast";
+import { saveDebts } from "@/app/actions/saveDebts";
 
 export interface DebtsSectionProps {
-  debts: Debt[];
-  setDebts: React.Dispatch<React.SetStateAction<Debt[]>>;
+  initialDebts: Debt[];
   portfolioTotal: number;
 }
 
-const SAVED_MESSAGE_DURATION_MS = 2000;
+const PERSIST_DEBOUNCE_MS = 800;
 
 function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
@@ -39,7 +40,29 @@ function DeadlineBadge({ deadlineIsoDate }: { deadlineIsoDate: string }): React.
   );
 }
 
-export function DebtsSection({ debts, setDebts, portfolioTotal }: DebtsSectionProps): React.JSX.Element {
+export function DebtsSection({ initialDebts, portfolioTotal }: DebtsSectionProps): React.JSX.Element {
+  const [debts, setDebts] = useState<Debt[]>(initialDebts);
+
+  const pendingDebtsFlush = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    return () => {
+      pendingDebtsFlush.current?.();
+    };
+  }, []);
+
+  const isFirstDebtsRun = useRef(true);
+  useEffect(() => {
+    if (isFirstDebtsRun.current) { isFirstDebtsRun.current = false; return; }
+    const persistDebts = (): void => {
+      pendingDebtsFlush.current = null;
+      saveDebts(debts).catch((error: unknown) => console.error("Failed to persist debts", error));
+    };
+    pendingDebtsFlush.current = persistDebts;
+    const timeoutId = setTimeout(persistDebts, PERSIST_DEBOUNCE_MS);
+    return () => clearTimeout(timeoutId);
+  }, [debts]);
+
   const [sectionOpen, setSectionOpen] = useState<boolean>(true);
   const [editing, setEditing] = useState<boolean>(false);
   const [draftDebts, setDraftDebts] = useState<Debt[]>(debts);
@@ -146,7 +169,7 @@ export function DebtsSection({ debts, setDebts, portfolioTotal }: DebtsSectionPr
             <button className="seg on" onClick={toggleEditing}>
               {editing ? "Cerrar edición" : "Editar deudas"}
             </button>
-            {saved && <span style={{ fontSize: 12, color: palette.acc }}>Guardado ✓</span>}
+            <SavedToast visible={saved} />
           </div>
 
           {!editing && (

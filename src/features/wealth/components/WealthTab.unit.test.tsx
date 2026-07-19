@@ -1,38 +1,31 @@
 // @vitest-environment jsdom
 import React from "react";
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, within, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { WealthTab } from "@/features/wealth/components/WealthTab";
-import { PortfolioCalculator } from "@/features/wealth/domain/PortfolioCalculator";
 import type { Position } from "@/features/wealth/domain/types";
 import type { WealthTargets } from "@/features/wealth/domain/WealthTargets";
 import { WEALTH_TARGETS_INITIAL } from "@/features/wealth/data/wealthTargets";
 import { currencyFormatter } from "@/lib/CurrencyFormatter";
 import type { Debt } from "@/shared/domain/types";
+import { savePortfolio } from "@/app/actions/savePortfolio";
+import { saveWealthTargets } from "@/app/actions/saveWealthTargets";
 
-const portfolioCalculator = new PortfolioCalculator();
+vi.mock("@/app/actions/savePortfolio", () => ({ savePortfolio: vi.fn().mockResolvedValue(undefined) }));
+vi.mock("@/app/actions/saveWealthTargets", () => ({ saveWealthTargets: vi.fn().mockResolvedValue(undefined) }));
 
 beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false } as Response));
+  vi.clearAllMocks();
 });
 
 function renderWealthTab(portfolio: Position[], wealthTargets: WealthTargets | null = WEALTH_TARGETS_INITIAL, debts: Debt[] = []) {
-  const setPortfolio = vi.fn();
-  const setWealthTargets = vi.fn();
-
   const view = render(
-    <WealthTab
-      portfolio={portfolio}
-      setPortfolio={setPortfolio}
-      portfolioDerived={portfolioCalculator.derive(portfolio)}
-      debts={debts}
-      wealthTargets={wealthTargets}
-      setWealthTargets={setWealthTargets}
-    />,
+    <WealthTab initialPortfolio={portfolio} initialWealthTargets={wealthTargets} debts={debts} />,
   );
 
-  return { setPortfolio, setWealthTargets, container: view.container };
+  return { container: view.container };
 }
 
 describe("WealthTab", () => {
@@ -145,5 +138,56 @@ describe("WealthTab", () => {
     renderWealthTab([bitcoin, cash], targets);
 
     expect(screen.getByText(/pausar aportaciones de BTC/)).toBeInTheDocument();
+  });
+
+  describe("autosave", () => {
+    const position: Position = { id: "efectivo-1", name: "Cuenta", ticker: "", type: "efectivo", units: 500, price: 1, group: "liquidez", equityIndex: null };
+
+    beforeEach(() => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("should not persist the portfolio until the debounce window elapses", async () => {
+      renderWealthTab([position]);
+      fireEvent.click(screen.getByRole("button", { name: "Editar cartera" }));
+
+      fireEvent.change(screen.getByRole("textbox", { name: "Nombre" }), { target: { value: "Cuenta renombrada" } });
+
+      expect(savePortfolio).not.toHaveBeenCalled();
+    });
+
+    it("should persist the edited portfolio once the debounce window elapses", async () => {
+      renderWealthTab([position]);
+      fireEvent.click(screen.getByRole("button", { name: "Editar cartera" }));
+
+      fireEvent.change(screen.getByRole("textbox", { name: "Nombre" }), { target: { value: "Cuenta renombrada" } });
+      await vi.advanceTimersByTimeAsync(800);
+
+      expect(savePortfolio).toHaveBeenCalledWith([{ ...position, name: "Cuenta renombrada" }]);
+    });
+
+    it("should flush a pending portfolio save synchronously when the tab unmounts before the debounce fires", () => {
+      const { unmount } = render(<WealthTab initialPortfolio={[position]} initialWealthTargets={WEALTH_TARGETS_INITIAL} debts={[]} />);
+      fireEvent.click(screen.getByRole("button", { name: "Editar cartera" }));
+      fireEvent.change(screen.getByRole("textbox", { name: "Nombre" }), { target: { value: "Cuenta renombrada" } });
+
+      unmount();
+
+      expect(savePortfolio).toHaveBeenCalledWith([{ ...position, name: "Cuenta renombrada" }]);
+    });
+
+    it("should persist edited wealth targets once the debounce window elapses", async () => {
+      renderWealthTab([position], WEALTH_TARGETS_INITIAL);
+      fireEvent.click(screen.getByRole("button", { name: "Editar objetivos" }));
+
+      fireEvent.change(screen.getByRole("spinbutton", { name: "Fondo de emergencia objetivo (€)" }), { target: { value: "6000" } });
+      await vi.advanceTimersByTimeAsync(800);
+
+      expect(saveWealthTargets).toHaveBeenCalledWith({ ...WEALTH_TARGETS_INITIAL, emergencyFund: 6000 });
+    });
   });
 });

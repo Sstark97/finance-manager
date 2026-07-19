@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { palette } from "@/lib/theme";
+import { OnboardingCard } from "@/shared/ui/OnboardingCard";
 import type { WealthTargets } from "@/features/wealth/domain/WealthTargets";
 import { WEALTH_TARGETS_INITIAL } from "@/features/wealth/data/wealthTargets";
 
@@ -30,14 +31,13 @@ export function WealthTargetsOnboarding({ onCreateTargets, className }: WealthTa
   };
 
   return (
-    <div className={`card span-full${className ? ` ${className}` : ""}`}>
-      <div className="eyebrow" style={{ marginBottom:6 }}>Configura tus objetivos de patrimonio</div>
-      <p style={{ margin:"0 0 16px", fontSize:12.5, color:palette.sub, lineHeight:1.5 }}>
-        Aún no has guardado tus objetivos de patrimonio. Estos parámetros alimentan el fondo de
-        emergencia, la distribución objetivo de renta variable y las reglas de Bitcoin. Los valores
-        de ejemplo son solo una sugerencia, no se guardan hasta que confirmes.
-      </p>
-
+    <OnboardingCard
+      className={className}
+      title="Configura tus objetivos de patrimonio"
+      description="Aún no has guardado tus objetivos de patrimonio. Estos parámetros alimentan el fondo de emergencia, la distribución objetivo de renta variable y las reglas de Bitcoin. Los valores de ejemplo son solo una sugerencia, no se guardan hasta que confirmes."
+      ctaLabel="Crear mis objetivos"
+      onConfirm={createTargets}
+    >
       <div className="grid" style={{ gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))", marginBottom:18 }}>
         <label>
           <div style={{ fontSize:11, color:palette.sub, marginBottom:3 }}>Fondo de emergencia objetivo (€)</div>
@@ -76,10 +76,6 @@ export function WealthTargetsOnboarding({ onCreateTargets, className }: WealthTa
           <input className="inp" type="number" step="any" placeholder={String(WEALTH_TARGETS_INITIAL.btcSellCapital)} value={btcSellCapital || ""} onChange={(event: React.ChangeEvent<HTMLInputElement>)=>setBtcSellCapital(parseFloat(event.target.value)||0)} />
         </label>
       </div>
-
-      <div style={{ display:"flex", justifyContent:"flex-end", paddingTop:16, borderTop:`1px solid ${palette.line}` }}>
-        <button className="seg on" onClick={createTargets}>Crear mis objetivos</button>
-      </div>
-    </div>
+    </OnboardingCard>
   );
 }
