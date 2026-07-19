@@ -8,6 +8,7 @@ import type { Debt } from "@/shared/domain/types";
 import { DebtLedger } from "@/shared/domain/DebtLedger";
 import { DebtDeadline } from "@/shared/domain/DebtDeadline";
 import { Metric } from "@/shared/ui/Metric";
+import { DebtProjectionChart } from "@/features/debts/components/DebtProjectionChart";
 
 export interface DebtsSectionProps {
   debts: Debt[];
@@ -230,6 +231,10 @@ export function DebtsSection({ debts, setDebts, portfolioTotal }: DebtsSectionPr
               </div>
             </>
           )}
+
+          <div style={{ marginTop: 18, paddingTop: 14, borderTop: `1px solid ${palette.line}` }}>
+            <DebtProjectionChart debts={debts} />
+          </div>
 
           <div style={{ marginTop: 18, paddingTop: 14, borderTop: `1px solid ${palette.line}` }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>

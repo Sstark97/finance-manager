@@ -371,4 +371,19 @@ describe("DebtsSection", () => {
 
     expect(screen.getByRole("button", { name: /Deudas y patrimonio neto/ })).toHaveAttribute("aria-expanded", "false");
   });
+
+  describe("debt amortization projection", () => {
+    it("should show the projection chart for the active debts in the section", () => {
+      renderDebtsSection([SAMPLE_DEBT]);
+
+      expect(screen.getByText("Proyección · amortización de deuda")).toBeInTheDocument();
+      expect(screen.getByText(/Libre de deudas en ~/)).toBeInTheDocument();
+    });
+
+    it("should show the projection empty state when there are no active debts left", () => {
+      renderDebtsSection([SETTLED_DEBT]);
+
+      expect(screen.getByText("Sin deudas activas que proyectar.")).toBeInTheDocument();
+    });
+  });
 });
