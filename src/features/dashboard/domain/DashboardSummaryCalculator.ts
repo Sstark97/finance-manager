@@ -3,7 +3,7 @@ import { DebtLedger } from "@/shared/domain/DebtLedger";
 import { netWorthCalculator, type NetWorthBreakdown } from "@/shared/domain/NetWorthCalculator";
 import type { PortfolioDerived } from "@/features/wealth/domain/PortfolioCalculator";
 import type { WealthTargets } from "@/features/wealth/domain/WealthTargets";
-import { WEALTH_TARGETS_INITIAL } from "@/features/wealth/data/wealthTargets";
+import { wealthTargetsResolver } from "@/features/wealth/domain/WealthTargetsResolver";
 import type { Budget, Month } from "@/features/budget/domain/types";
 import { monthAvailability } from "@/features/budget/domain/MonthAvailability";
 import { monthlyBudgetCalculator, type MonthlyBudgetResult } from "@/features/budget/domain/MonthlyBudgetCalculator";
@@ -40,7 +40,7 @@ export class DashboardSummaryCalculator {
     const currentMonth = this.mostRecentAvailableMonth(months);
     const monthlyResult = currentMonth && baseBudget ? monthlyBudgetCalculator.calculate(currentMonth, baseBudget) : null;
 
-    const effectiveWealthTargets = wealthTargets ?? WEALTH_TARGETS_INITIAL;
+    const effectiveWealthTargets = wealthTargetsResolver.resolve(wealthTargets);
     const emergencyFundMet = portfolioDerived.liquidityTotal >= effectiveWealthTargets.minimumFund;
     const emergencyFundProgress = effectiveWealthTargets.emergencyFund
       ? Math.min(100, (portfolioDerived.liquidityTotal / effectiveWealthTargets.emergencyFund) * 100)
