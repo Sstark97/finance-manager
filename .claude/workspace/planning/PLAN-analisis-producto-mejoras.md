@@ -4,6 +4,21 @@
 > Las propuestas están priorizadas (Quick wins · Mejoras grandes · Nice-to-have) y fundamentadas en
 > el código real del repo, no en suposiciones.
 
+## Estado de ejecución (2026-07-19)
+
+- **Fase 1 (Quick wins, sección 3.A)** — ✅ completada y commiteada.
+- **Fase 2a (Dashboard + registro de movimientos, puntos 7 y 8 de 3.B)** — ✅ completada y
+  commiteada, más varias iteraciones de feedback UX directo del usuario tras probar en real
+  (gráficos del dashboard, patrimonio neto largo/corto plazo manual, menú de ajustes, gráfico de
+  evolución del patrimonio en el dashboard, proyección de amortización de deuda).
+- **Fase 2b (categorías+tags, suscripciones, tendencias, push PWA — puntos 9-12 de 3.B)** —
+  ⏸️ **PAUSADA A PETICIÓN EXPLÍCITA DEL USUARIO.**
+  **No retomar esta fase salvo instrucción explícita del usuario en una conversación futura.**
+  Si en algún momento se detecta este plan como "trabajo pendiente" (por ejemplo al iniciar una
+  tarea nueva sin relación), **no asumir que hay que continuarlo automáticamente** — el usuario
+  quiere decidir él mismo cuándo retomarlo.
+- **Fase 3 (Nice-to-have, sección 3.C)** — no iniciada.
+
 ## Goal
 Evaluar el estado actual de `finance-manager`, compararlo con las principales apps de finanzas
 personales del mercado, y proponer un backlog priorizado de mejoras de UX/UI y de nuevas
