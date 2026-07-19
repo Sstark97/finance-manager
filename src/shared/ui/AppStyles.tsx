@@ -45,6 +45,9 @@ export function AppStyles(): React.JSX.Element {
       @media (max-width:640px){ .gf-row, .evt-row, .deuda-row, .mov-row { grid-template-columns:1fr 1fr; } .deuda-row > div:first-child { grid-column:1/-1; } }
       @media (max-width:420px){ .gf-row, .evt-row, .deuda-row, .mov-row { grid-template-columns:1fr; } .tabbtn { padding:8px 12px; font-size:12.5px; } }
 
+      @keyframes skeleton-pulse { 0%,100% { opacity:.35; } 50% { opacity:.85; } }
+      .skeleton-line { height:14px; border-radius:6px; background:${palette.panel2}; animation:skeleton-pulse 1.4s ease-in-out infinite; }
+
       .mobile-tabbar { display:none; }
       .mobile-tabbar-btn { background:none; border:none; display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 0; flex:1; font-size:10.5px; font-weight:500; }
       @media (max-width:760px){
